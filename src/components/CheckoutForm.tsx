@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { won } from "@/lib/format";
+import { PayButton } from "./PayButton";
 
 export type CheckoutOrder = {
   code: string;
@@ -17,7 +18,7 @@ export type CheckoutOrder = {
 };
 
 /** 주문서: 쿠폰 넣기·빼기, 가격 내역, 환불 규정 동의, 결제. */
-export function CheckoutForm({ order }: { order: CheckoutOrder }) {
+export function CheckoutForm({ order, toss }: { order: CheckoutOrder; toss: boolean }) {
   const router = useRouter();
   const [code, setCode] = useState(order.coupon_code ?? "");
   const [agreed, setAgreed] = useState(false);
@@ -95,7 +96,8 @@ export function CheckoutForm({ order }: { order: CheckoutOrder }) {
           </span>
         </label>
         <div className="mt-4">
-          <button type="button" disabled={!agreed} className="btn-primary w-full py-3">결제는 곧 열려요</button>
+          <PayButton code={order.code} amount={order.payable} toss={toss} disabled={!agreed || busy} />
+          {!agreed && <p className="mt-1 text-center text-xs text-slate-500">환불 규정을 확인하고 체크해 주세요.</p>}
         </div>
       </aside>
     </div>

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { dateTimeKo } from "@/lib/format";
 import { currentUser } from "@/server/auth/current";
+import { tossEnabled } from "@/server/env";
 import { HttpError } from "@/server/http";
 import { getOrderForUser, orderView } from "@/server/orders";
 
@@ -33,7 +34,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
           <Link href="/courses" className="btn-primary mt-4">강의 다시 담기</Link>
         </div>
       ) : (
-        <CheckoutForm order={v} />
+        <CheckoutForm order={v} toss={tossEnabled()} />
       )}
     </div>
   );
