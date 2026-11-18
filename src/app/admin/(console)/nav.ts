@@ -45,6 +45,17 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    // 운영(대기열·서비스 모드·장애 공지·지표)과 웹훅 화면은 M7(/admin/ops, /admin/webhooks)이 채운다
+    label: "운영",
+    items: [
+      { href: "/admin/ops", label: "운영 개요", perm: "ops" },
+      { href: "/admin/ops/incidents", label: "장애 공지", perm: "ops" },
+      { href: "/admin/ops/mode", label: "서비스 모드", perm: "ops" },
+      { href: "/admin/ops/queue", label: "대기열", perm: "ops" },
+      { href: "/admin/webhooks", label: "웹훅", perm: "api_keys" },
+    ],
+  },
+  {
     label: "관리자",
     items: [
       { href: "/admin/staff", label: "직원", perm: "staff" },

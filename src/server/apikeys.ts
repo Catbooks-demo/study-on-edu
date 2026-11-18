@@ -15,6 +15,7 @@ export const SCOPE_KO: Record<Scope, string> = {
   metrics: "지표 (/metrics)",
 };
 export const KEY_PREFIX = "sok_";
+export type Need = "read" | "write" | "metrics";
 /** 키당 분당 요청 한도. */
 export const API_LIMIT_PER_MIN = 600;
 
@@ -38,7 +39,7 @@ export async function revokeApiKey(id: string, now: Date = new Date()): Promise<
 }
 
 /** 필요한 범위를 이 키가 갖고 있는지. read는 read·read_pii, metrics는 metrics만, write는 write만. */
-export function hasScope(scopes: string[], need: "read" | "write" | "metrics"): boolean {
+export function hasScope(scopes: string[], need: Need): boolean {
   if (need === "read") return scopes.includes("read") || scopes.includes("read_pii");
   return scopes.includes(need);
 }
@@ -48,7 +49,7 @@ const NEED_KO = { read: "읽기", write: "쓰기", metrics: "지표" } as const;
 /**
  * `Authorization: Bearer <키>` 확인. 없거나 틀리거나 폐기됐으면 401, 범위가 모자라면 403, 분당 600회를 넘으면 429.
  */
-export async function authApiKey(req: Request, need: "read" | "write" | "metrics"): Promise<ApiKey> {
+export async function authApiKey(req: Request, need: Need): Promise<ApiKey> {
   const h = req.headers.get("authorization") ?? "";
   const m = h.match(/^Bearer\s+(\S{1,200})$/i);
   if (!m) throw new HttpError(401, "UNAUTHORIZED", "API 키가 필요해요 (Authorization: Bearer <키>).");
@@ -63,6 +64,9 @@ export async function authApiKey(req: Request, need: "read" | "write" | "metrics
 }
 
 export const canSeePii = (k: ApiKey) => k.scopes.includes("read_pii");
+
+/** 작업 기록·답변자에 남길 이름. */
+export const apiActor = (k: ApiKey) => `api:${k.name}`;
 
 /** 새로 만든 키 원문을 다음 화면에 한 번 넘기는 쿠키 이름 (1분, /admin/api-keys에서만). */
 export const NEW_KEY_COOKIE = "so_newkey";
