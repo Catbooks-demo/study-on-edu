@@ -5,11 +5,10 @@ import { db } from "./db";
 import { registerDevice } from "./devices";
 import { activeEnrollment } from "./enrollments";
 import { getEnv } from "./env";
+import { grantSubscriptionAccess } from "./subscriptions";
 import { HttpError } from "./http";
 import type { Tx } from "./tx";
 
-/** 구독 수강권을 새로 만들 수 있는 구독 상태 (일시정지는 안 된다). */
-const SUB_PLAYABLE = ["active", "past_due"];
 /** "동시 재생 수" 지표: 최근 60초 안에 하트비트가 온 소유권. */
 const ACTIVE_WINDOW_MS = 60_000;
 /** 쉬었다 와도 하트비트 한 번에 쳐 줄 수 있는 최대 경과 = 주기 × 3 (오래 멈춘 뒤 끝으로 끌어도 쌓인 시간을 못 쓰게). */
@@ -24,22 +23,6 @@ const NO_ACCESS = () => new HttpError(403, "NO_ACCESS", "수강권이 있어야 
 
 export type LectureAccess = { lecture: Lecture; course: Course; enrollment: Enrollment | null; preview: boolean };
 
-/** 구독 대상 강의이고 구독이 살아 있으면(active·past_due) 구독 수강권을 만든다. 수강권은 (수강생, 강의)당 하나. */
-async function subscriptionEnrollment(userId: string, course: Course, now: Date): Promise<Enrollment | null> {
-  if (!course.in_subscription) return null;
-  const sub = await db.subscription.findFirst({
-    where: { user_id: userId, status: { in: SUB_PLAYABLE } },
-    orderBy: { created_at: "desc" },
-  });
-  if (!sub) return null;
-  const data = { source: "subscription", subscription_id: sub.id, order_item_id: null, starts_at: now, expires_at: null, status: "active" };
-  return db.enrollment.upsert({
-    where: { user_id_course_id: { user_id: userId, course_id: course.id } },
-    create: { user_id: userId, course_id: course.id, ...data },
-    update: data,
-  });
-}
-
 /**
  * 이 강을 볼 수 있는지.
  * 미리보기 강은 누구나(공개 강의만) 볼 수 있고, 그 밖에는 지금 살아 있는 수강권이 있어야 한다(없으면 403 NO_ACCESS).
@@ -49,8 +32,8 @@ export async function lectureAccess(userId: string | null, lectureId: string, no
   const lecture = await db.lecture.findUnique({ where: { id: lectureId }, include: { course: true } });
   if (!lecture) throw new HttpError(404, "NOT_FOUND", "강을 찾지 못했어요.");
   const { course, ...lec } = lecture;
-  let enrollment = userId ? await activeEnrollment(userId, course.id, now) : null;
-  if (!enrollment && userId && course.status === "published") enrollment = await subscriptionEnrollment(userId, course, now);
+  // 구매·무료 수강권이 살아 있으면 그것, 아니면 구독(active·past_due)으로 지연 생성 (M5 grantSubscriptionAccess와 같은 함수)
+  const enrollment = userId ? ((await activeEnrollment(userId, course.id, now)) ?? (await grantSubscriptionAccess(userId, course.id, now))) : null;
   const preview = lec.is_preview && course.status === "published";
   if (!enrollment && !preview) throw NO_ACCESS();
   return { lecture: lec, course, enrollment, preview: !enrollment && preview };
