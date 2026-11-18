@@ -25,7 +25,7 @@ import { issueCertificate } from "@/server/certificates";
 import { db } from "@/server/db";
 import { HttpError } from "@/server/http";
 import { answerInquiry, createInquiry } from "@/server/inquiries";
-import { runJobsOnce } from "@/server/jobs";
+import { JOBS, runJobsOnce, SYNTH_BACKFILL_LOCK } from "@/server/jobs";
 import { enterLive, postChat, reserveSeat } from "@/server/live";
 import { recordMessage } from "@/server/messages";
 import { createOrder } from "@/server/orders";
@@ -164,12 +164,14 @@ export interface DayStats {
   planned: number;
   inserted: number;
   lost: number; // 후보를 모두 살 수 없어 못 넣음
+  /** 서버가 업무 오류(4xx)로 받지 않아 건너뛴 결제 계획. 예전 상태 파일에는 없을 수 있다. */
+  skipped?: number;
   missed: number; // 매일 모드가 꺼져 있어 놓침
   byKind: Record<string, number>;
   byCat: Record<string, number>;
   followups: Record<string, number>;
 }
-export const emptyStats = (): DayStats => ({ planned: 0, inserted: 0, lost: 0, missed: 0, byKind: {}, byCat: {}, followups: {} });
+export const emptyStats = (): DayStats => ({ planned: 0, inserted: 0, lost: 0, skipped: 0, missed: 0, byKind: {}, byCat: {}, followups: {} });
 
 /** 매일 모드로 넘기는 덧붙임 상태 (장애·보상 쿠폰). */
 export interface Extra {
@@ -179,8 +181,10 @@ export interface Extra {
   sorry: number[]; // 보상 쿠폰을 받은 회원
   sorryUsed: number[];
   spikeRewatch: number;
+  /** 업무 오류(4xx)로 건너뛴 일: "종류:오류 코드" → 수. 예전 상태 파일에는 없을 수 있다. */
+  skips?: Record<string, number>;
 }
-export const emptyExtra = (): Extra => ({ faultUsers: [], faultSessions: 0, faultInquirers: [], sorry: [], sorryUsed: [], spikeRewatch: 0 });
+export const emptyExtra = (): Extra => ({ faultUsers: [], faultSessions: 0, faultInquirers: [], sorry: [], sorryUsed: [], spikeRewatch: 0, skips: {} });
 
 interface CourseRow {
   id: string;
@@ -221,8 +225,23 @@ export const bump = (ctx: Ctx, t: number, what: string, n = 1) => {
 };
 
 /** 끝난 것으로 치는 오류: 상태가 이미 바뀌었거나(환불·해지·만료) 할 일이 없을 때. */
-function skippable(e: unknown): e is HttpError {
+export function skippable(e: unknown): e is HttpError {
   return e instanceof HttpError && e.status >= 400 && e.status < 500;
+}
+
+/** 같은 "종류:코드"는 로그에 이만큼만 남기고 그 뒤로는 세기만 한다 (수천 줄이 되지 않게). */
+const SKIP_LOG_MAX = 5;
+
+/** 업무 오류로 건너뛴 일 하나: 그날 followups(skipped_<종류>)와 extra.skips(종류:코드)에 세고 로그를 남긴다. */
+export function noteSkip(ctx: Ctx, t: number, what: string, e: HttpError, detail: string): void {
+  bump(ctx, t, `skipped_${what}`);
+  const skips = (ctx.extra.skips ??= {});
+  const k = `${what}:${e.code}`;
+  const n = (skips[k] = (skips[k] ?? 0) + 1);
+  if (n <= SKIP_LOG_MAX) {
+    const more = n === SKIP_LOG_MAX ? ` (${k}는 이제 로그 없이 세기만 해요)` : "";
+    ctx.log(`건너뜀 ${what} ${detail} @${new Date(t).toISOString()}: ${e.status} ${e.code} ${e.message}${more}`);
+  }
 }
 
 // ── 시각 ──
@@ -440,8 +459,25 @@ const sorryValid = (t: number) => {
   return t >= start && t < start + c.days * DAY;
 };
 
-/** 계획 하나를 결제로. 넣었으면 true. */
+/**
+ * 계획 하나를 결제로. 넣었으면 true.
+ * 서버가 업무 오류(4xx: 이미 결제·취소된 주문, 쿠폰 조건 등)로 받지 않으면 그 계획만 건너뛰고(skipped) false.
+ * 그 밖의 오류(DB·코드 오류)는 그대로 던져 실행을 멈춘다.
+ */
 export async function placeIntent(ctx: Ctx, intent: Intent): Promise<boolean> {
+  try {
+    return await placeIntentOnce(ctx, intent);
+  } catch (e) {
+    if (!skippable(e)) throw e;
+    const st = dayStats(ctx, intent.day);
+    st.skipped = (st.skipped ?? 0) + 1;
+    noteSkip(ctx, intent.t, "intent", e, `${intent.key} (m${intent.member + 1}, ${intent.kind})`);
+    if (ctx.since) await stamp(ctx, intent.t);
+    return false;
+  }
+}
+
+async function placeIntentOnce(ctx: Ctx, intent: Intent): Promise<boolean> {
   const st = dayStats(ctx, intent.day);
   const uid = ctx.userIds.get(intent.member);
   if (!uid) throw new Error(`가상 회원이 DB에 없어요: m${intent.member + 1}`);
@@ -771,7 +807,7 @@ export async function handle(ctx: Ctx, ev: Ev): Promise<void> {
     }
   } catch (e) {
     if (skippable(e)) {
-      bump(ctx, ev.t, `skipped_${ev.kind}`);
+      noteSkip(ctx, ev.t, ev.kind, e, "member" in ev ? `m${ev.member + 1}` : "");
       if (ctx.since) await stamp(ctx, ev.t);
       return;
     }
@@ -1051,6 +1087,42 @@ export async function deleteSynthetic(): Promise<Record<string, number>> {
     },
     { timeout: 900_000, maxWait: 30_000 },
   );
+}
+
+/**
+ * 되채우기 동안 잠금(SYNTH_BACKFILL_LOCK)을 잡고 있는다. 앱의 스케줄러는 이 잠금이 잡혀 있으면 쉰다
+ * (2026-11-18 사고: 앱의 결제 기한 작업이 지금 시각으로 돌며 되채우기가 막 만든 지난 시각 주문을 취소해
+ * mockPay가 "이미 결제했거나 취소된 주문"으로 멈췄다). 잡은 뒤에는 이미 돌고 있던 앱 작업이 끝나기를 기다린다.
+ * 다른 되채우기가 잠금을 잡고 있으면 오류. 돌려준 함수로 푼다 (프로세스가 죽으면 연결과 함께 풀린다).
+ */
+export async function holdBackfillLock(): Promise<() => Promise<void>> {
+  let release!: () => void;
+  const until = new Promise<void>((r) => (release = r));
+  let held!: Promise<void>;
+  const got = await new Promise<boolean>((resolve, reject) => {
+    held = db
+      .$transaction(
+        async (tx) => {
+          const r = await tx.$queryRaw<{ ok: boolean }[]>`SELECT pg_try_advisory_xact_lock(hashtext(${SYNTH_BACKFILL_LOCK})) AS ok`;
+          const ok = !!r[0]?.ok;
+          resolve(ok);
+          if (ok) await until;
+        },
+        { timeout: 48 * 3600_000, maxWait: 30_000 },
+      )
+      .catch((e) => reject(e));
+  });
+  if (!got) throw new Error("다른 되채우기가 이 DB에서 돌고 있어요. 끝난 뒤에 다시 해 주세요.");
+  // 이미 돌고 있던 앱 주기 작업이 끝나기를 기다린다 (작업 잠금을 잡았다 바로 놓는다)
+  for (const name of Object.keys(JOBS)) {
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`job:${name}`}))`;
+    });
+  }
+  return async () => {
+    release();
+    await held;
+  };
 }
 
 /** 앱의 주기 작업이 최근에 돌았는지 (되채우기는 앱 작업이 멈춘 동안만). */

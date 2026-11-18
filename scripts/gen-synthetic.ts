@@ -13,6 +13,9 @@
  *
  * DATABASE_URL이 가리키는 DB에 쓴다. 되채우기 동안은 앱을 멈추거나 JOBS_ENABLED=false로 둔다
  * (지난 시각으로 처리하는 동안 앱의 주기 작업이 지금 시각으로 끼어들면 안 된다).
+ * 되채우기는 도는 내내 DB 잠금(synth:backfill)을 잡고, 이 버전 이후의 앱 스케줄러는 그 잠금을 보면 쉰다.
+ * 그 전 버전 앱은 잠금을 모르므로 그때는 꼭 앱을 멈추거나 JOBS_ENABLED=false로.
+ * 서버가 업무 오류(4xx)로 받지 않은 일은 건너뛰고 로그·정답지(skipped)에 센다. 그 밖의 오류는 스택을 남기고 멈춘다.
  */
 import { DEFAULT_SEED } from "./synthetic/model";
 import { resolveOut } from "./synthetic/outdir";
@@ -56,6 +59,14 @@ export function parseArgs(argv: string[]): Args {
   return a;
 }
 
+/** 멈출 때 로그에 남길 오류 글: 업무 오류면 상태·코드, 그리고 늘 스택까지. */
+export function errorText(e: unknown): string {
+  if (!(e instanceof Error)) return String(e);
+  const http = "status" in e && "code" in e ? ` [${String((e as { status: unknown }).status)} ${String((e as { code: unknown }).code)}]` : "";
+  return `[${new Date().toISOString()}] 오류로 멈췄어요${http}: ${e.message}
+${e.stack ?? "(스택 없음)"}`;
+}
+
 const log = (msg: string) => console.log(`[${new Date().toISOString()}] ${msg}`);
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {
@@ -82,7 +93,7 @@ const invoked = process.argv[1]?.replace(/\\/g, "/").endsWith("scripts/gen-synth
 if (invoked) {
   main()
     .catch((e) => {
-      console.error(e instanceof Error ? e.message : e);
+      console.error(errorText(e));
       process.exitCode = 1;
     })
     .finally(async () => {

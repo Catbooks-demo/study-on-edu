@@ -18,6 +18,7 @@ import {
   ensureStaff,
   EventQueue,
   handle,
+  holdBackfillLock,
   insertMembers,
   loadCourses,
   loadUserIds,
@@ -54,6 +55,22 @@ export async function runBackfill(o: BackfillOptions): Promise<void> {
 }
 
 async function backfill(o: BackfillOptions): Promise<void> {
+  // 도는 동안 앱의 주기 작업을 쉬게 한다 (앱 스케줄러가 이 잠금을 본다). 지우기(--replace)도 이 안에서.
+  const release = await holdBackfillLock();
+  try {
+    await backfillLocked(o);
+  } finally {
+    await release();
+  }
+}
+
+/** 지금 처리하던 일을 사람이 읽을 수 있게 (예상 못 한 오류로 멈출 때 로그에). */
+function describe(x: { kind?: string; key?: string; t: number; member?: number }): string {
+  const what = x.key ? `결제 계획 ${x.key}` : `사건 ${x.kind}`;
+  return `${what}${x.member !== undefined ? ` (m${x.member + 1})` : ""}, 시각 ${kstDate(new Date(x.t))} ${new Date(x.t).toISOString()}`;
+}
+
+async function backfillLocked(o: BackfillOptions): Promise<void> {
   const log = o.log;
   const started = o.now ?? new Date();
   const size = o.members ? { members: o.members, newMembers: Math.round(o.members / 10) } : {};
@@ -125,16 +142,26 @@ async function backfill(o: BackfillOptions): Promise<void> {
     const top = ctx.queue.peek();
     const ne = top && top.t <= cutoff ? top : null;
     if (!ni && !ne) break;
-    if (ni && (!ne || ni.t <= ne.t)) {
-      ii++;
-      if (await placeIntent(ctx, ni)) placed++;
-    } else if (ne) {
-      ctx.queue.pop();
-      await handle(ctx, ne);
+    const cur = ni && (!ne || ni.t <= ne.t) ? ni : ne!;
+    try {
+      if (cur === ni) {
+        ii++;
+        if (await placeIntent(ctx, ni)) placed++;
+      } else {
+        ctx.queue.pop();
+        await handle(ctx, ne!);
+      }
+    } catch (e) {
+      // 업무 오류(4xx)는 placeIntent·handle이 건너뛰므로, 여기까지 오면 예상 못 한 오류다. 무엇을 하다 멈췄는지 남긴다.
+      log(`멈춤: ${describe(cur as Parameters<typeof describe>[0])} 처리 중 예상 못 한 오류 (${steps}개 처리, 결제 ${placed}건)`);
+      throw e;
     }
     if (++steps % 2000 === 0) log(`… ${steps}개 처리 (결제 ${placed}건, ${kstDate(new Date((ni ?? ne)!.t))}, ${Math.round((Date.now() - t0) / 1000)}초)`);
   }
   log(`넣기 끝: 결제 ${placed}건, 사건 ${steps}개, ${Math.round((Date.now() - t0) / 1000)}초`);
+  const skips = ctx.extra.skips ?? {};
+  const skipTotal = Object.values(skips).reduce((a, b) => a + b, 0);
+  log(skipTotal ? `업무 오류로 건너뜀 ${skipTotal}건: ${JSON.stringify(skips)}` : "업무 오류로 건너뛴 일 없음");
 
   // ── 매일 모드로 넘길 상태 ──
   const state: DailyState = {
