@@ -55,7 +55,7 @@ export function resetMetricsState(): void {
   g.__studyonMetrics = fresh();
 }
 
-/** 느린 쿼리 하나 (Prisma 쿼리 이벤트 500ms 이상, 또는 장애 주입의 DB 지연). */
+/** 느린 쿼리 하나 (Prisma 쿼리 이벤트 500ms 이상). */
 export function bumpSlowQuery(): void {
   metricsState().slowQueries++;
 }

@@ -11,11 +11,10 @@ const MENU = [
   { href: "/admin/ops/incidents", label: "장애 공지" },
   { href: "/admin/ops/mode", label: "서비스 모드" },
   { href: "/admin/ops/queue", label: "대기열" },
-  { href: "/admin/ops/faults", label: "장애 주입" },
   { href: "/admin/webhooks", label: "웹훅" },
 ] as const;
 
-/** 운영 화면 공통 틀 (admin만: 대기열·서비스 모드·장애 공지·장애 주입·지표). */
+/** 운영 화면 공통 틀 (admin만: 대기열·서비스 모드·장애 공지·지표). */
 export default async function OpsLayout({ children }: { children: React.ReactNode }) {
   const staff = await currentStaff();
   if (!staff) redirect("/admin/login?next=/admin/ops");

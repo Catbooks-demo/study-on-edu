@@ -19,7 +19,7 @@ const schema = z.object({
     .string()
     .optional()
     .transform((v) => (v ?? "true").toLowerCase() !== "false"),
-  /** 시연용 장애 주입을 켤 수 있는지. 시연 서버에서만 true. */
+  /** M1에서 만든 자리. 장애 주입은 M7에서 빼서 지금은 아무것도 켜지 않는다. */
   FAULTS_ENABLED: bool(false),
   /** 플레이어 하트비트 주기(초). e2e는 2. */
   NEXT_PUBLIC_HEARTBEAT_SEC: z

@@ -72,7 +72,6 @@ jobs:
       SEED_STAFF_PASSWORD: e2e-admin-pass
       SEED_INSTRUCTOR_PASSWORD: e2e-instructor-pass
       NEXT_PUBLIC_HEARTBEAT_SEC: "2"
-      FAULTS_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
