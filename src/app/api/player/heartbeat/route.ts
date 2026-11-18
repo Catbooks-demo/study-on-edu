@@ -11,4 +11,4 @@ export const POST = route(async (req) => {
   const user = await userFromRequest(req);
   const body = await readJson(req, heartbeatBody);
   return NextResponse.json(await heartbeat(user?.id ?? null, body));
-});
+}, { feature: "play" });

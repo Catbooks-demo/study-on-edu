@@ -115,7 +115,7 @@ describe("개인정보", () => {
     await db.payment.updateMany({ data: { toss_payment_key: "tgen_secret_key_123" } });
     await db.device.create({ data: { user_id: list[0].user.id, device_key: "dev-key-abc", name: "크롬" } }).catch(() => undefined);
     const k = await issueApiKey("ERP", ["read_pii", "write"]);
-    const handlers = [listCourses, listInstructors, listOrders, listPayments, listRefunds, listSubscriptions, listEnrollments, listInquiries, getMode, listQueuesV1, listIncidentsV1];
+    const handlers = [progress, listCourses, listInstructors, listOrders, listPayments, listRefunds, listSubscriptions, listEnrollments, listInquiries, getMode, listQueuesV1, listIncidentsV1];
     for (const h of handlers) {
       const r = await call(h, { headers: auth(k.key) });
       expect(r.status).toBe(200);
@@ -232,13 +232,43 @@ describe("쓰기 (AXcellent 같은 외부 시스템이 당기는 손잡이)", ()
     expect(await db.auditLog.count({ where: { actor: "api:마케팅", action: "coupon.create" } })).toBe(1);
   });
 
-  it("M4 endpoints not on dev yet answer 501", async () => {
-    const w = await issueApiKey("x", ["read", "write"]);
-    const p = await call(progress, { headers: auth(w.key) });
-    expect(p.status).toBe(501);
-    expect(p.body.error.code).toBe("NOT_IMPLEMENTED");
-    const a = await call(answerInquiry, { headers: auth(w.key), params: { id: "x" }, body: { answer: "안녕하세요" } });
-    expect(a.status).toBe(501);
+  it("progress summary per enrollment", async () => {
+    const { course, list } = await someOrders(2);
+    const lectures = await db.lecture.findMany({ where: { course_id: course.id }, orderBy: { sort: "asc" } });
+    const u = list[0].user;
+    const watchedAt = new Date("2026-11-18T01:00:00Z");
+    for (const l of lectures) {
+      await db.lectureProgress.create({
+        data: { user_id: u.id, lecture_id: l.id, course_id: course.id, watched_sec: l.duration_sec, completed_at: watchedAt, last_watched_at: watchedAt },
+      });
+    }
+    const k = await issueApiKey("x", ["read"]);
+    const r = await call<{ data: { member_id: string; course_code: string; progress_ratio: number; completed: boolean; last_watched_at: string | null }[] }>(progress, {
+      headers: auth(k.key),
+    });
+    expect(r.status).toBe(200);
+    const mine = r.body.data.find((d) => d.member_id === u.id)!;
+    expect(mine).toMatchObject({ course_code: course.code, progress_ratio: 1, completed: true, last_watched_at: watchedAt.toISOString() });
+    const other = r.body.data.find((d) => d.member_id === list[1].user.id)!;
+    expect(other).toMatchObject({ progress_ratio: 0, completed: false, last_watched_at: null });
+  });
+
+  it("inquiry answer via API, audited as api:<name>", async () => {
+    const user = await makeUser();
+    const q = await db.inquiry.create({ data: { user_id: user.id, category: "payment", title: "결제 문의", body: "영수증이 필요해요." } });
+    const read = await issueApiKey("읽기", ["read"]);
+    expect((await call(answerInquiry, { headers: auth(read.key), params: { id: q.id }, body: { answer: "안녕하세요" } })).status).toBe(403);
+    const w = await issueApiKey("상담봇", ["read", "write"]);
+    expect((await call(answerInquiry, { headers: auth(w.key), params: { id: q.id }, body: { answer: " " } })).status).toBe(400);
+    expect((await call(answerInquiry, { headers: auth(w.key), params: { id: "nope" }, body: { answer: "안녕하세요" } })).status).toBe(404);
+    const r = await call(answerInquiry, { headers: auth(w.key), params: { id: q.id }, body: { answer: "안녕하세요, 마이페이지에서 받을 수 있어요." } });
+    expect(r.status).toBe(200);
+    const after = await db.inquiry.findUniqueOrThrow({ where: { id: q.id } });
+    expect(after.status).toBe("answered");
+    expect(after.answered_by).toBe("api:상담봇");
+    expect(await db.auditLog.count({ where: { actor: "api:상담봇", action: "inquiry.answer" } })).toBe(1);
+    const listed = await call<{ data: { status: string }[] }>(listInquiries, { headers: auth(w.key) });
+    expect(listed.body.data[0].status).toBe("answered");
   });
 });
 

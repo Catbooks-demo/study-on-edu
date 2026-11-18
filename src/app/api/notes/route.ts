@@ -18,7 +18,7 @@ export const GET = route(async (req) => {
   const courseId = new URL(req.url).searchParams.get("course_id") ?? undefined;
   const notes = await listNotes(user.id, courseId || undefined);
   return NextResponse.json({ notes: notes.map(noteView) });
-});
+}, { feature: "browse" });
 
 /** 노트 쓰기 (강·시점). 수강권이 있어야 한다. */
 export const POST = route(async (req) => {
@@ -26,4 +26,4 @@ export const POST = route(async (req) => {
   const input = await readJson(req, body);
   const n = await addNote(user.id, input);
   return NextResponse.json({ note: noteView(n) }, { status: 201 });
-});
+}, { feature: "write" });

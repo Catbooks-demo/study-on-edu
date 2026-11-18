@@ -31,7 +31,6 @@ const write = (method: "post" | "patch", summary: string, schema: object, ok = "
   },
 });
 const idParam = (name: string) => [{ name, in: "path", required: true, schema: { type: "string" } }];
-const notYet = { "501": { description: "아직 준비 중 (`NOT_IMPLEMENTED`). 해당 마일스톤 머지 뒤 열린다." } };
 
 const MODES = ["normal", "degraded", "read_only", "maintenance"];
 const COMPONENTS = ["web", "player", "payments", "live", "api"];
@@ -64,19 +63,17 @@ export const OPENAPI = {
     "/api/v1/refunds": list("환불 요청 목록", status("requested, approved, rejected, done")),
     "/api/v1/subscriptions": list("구독 목록 (active, past_due, paused, cancelled, expired). 결제가 한 번도 안 된 구독은 빠진다"),
     "/api/v1/enrollments": list("수강권 목록 (source: order, bundle, subscription, free / status: active, expired, refunded)"),
-    "/api/v1/progress": {
-      get: {
-        ...list("진도 요약: 수강권마다 {enrollment_id, course_code, member_id, progress_ratio, completed, last_watched_at}").get,
-        responses: { ...list("").get.responses, ...notYet },
-      },
-    },
+    "/api/v1/progress": list(
+      "진도 요약: 수강권마다 {enrollment_id, course_code, member_id, status, progress_ratio(0~1), completed(80% 이상), last_watched_at}. 쪽 나누기는 수강권 updated_at 기준",
+    ),
     "/api/v1/inquiries": list("1:1 문의 목록", status("open, answered")),
-    "/api/v1/inquiries/{id}/answer": {
-      post: {
-        ...write("post", "문의 답변 (다시 보내면 고친다)", { type: "object", required: ["answer"], properties: { answer: { type: "string", maxLength: 5000 } } }, "200", idParam("id")).post,
-        responses: { "200": { description: "`{ok: true}`" }, ...common, ...notYet },
-      },
-    },
+    "/api/v1/inquiries/{id}/answer": write(
+      "post",
+      "문의 답변 (다시 보내면 고친다, 수강생에게 답변 알림)",
+      { type: "object", required: ["answer"], properties: { answer: { type: "string", maxLength: 5000 } } },
+      "200",
+      idParam("id"),
+    ),
     "/api/v1/coupons": write(
       "post",
       "쿠폰 만들기 (추천 코드 불가)",

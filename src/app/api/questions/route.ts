@@ -25,7 +25,7 @@ export const GET = route(async (req) => {
   }
   const qs = await listQuestions({ userId: user.id });
   return NextResponse.json({ questions: qs.map((q) => questionView(q, user.id)) });
-});
+}, { feature: "browse" });
 
 /** 질문 쓰기 (수강권 필요, 계정 10회/10분). */
 export const POST = route(async (req) => {
@@ -33,4 +33,4 @@ export const POST = route(async (req) => {
   const input = await readJson(req, body);
   const q = await askQuestion(user.id, input);
   return NextResponse.json({ question: { id: q.id } }, { status: 201 });
-});
+}, { feature: "write" });

@@ -12,4 +12,4 @@ export const POST = route(async (req) => {
   const body = await readJson(req, startBody);
   const r = await startPlayback(user?.id ?? null, body, new Date(), req.headers.get("user-agent"));
   return NextResponse.json(r);
-});
+}, { feature: "play" });

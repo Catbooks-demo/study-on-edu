@@ -29,4 +29,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const input = await readJson(req, body);
   const a = await answerQuestion(who, id, input.body);
   return NextResponse.json({ answer: { id: a.id } }, { status: 201 });
-});
+}, { feature: "write" });

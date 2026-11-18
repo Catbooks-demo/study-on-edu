@@ -12,4 +12,4 @@ export const GET = route<Ctx>(async (req, { params }) => {
   const user = await userFromRequest(req);
   const { id } = await params;
   return NextResponse.json(await playerInfo(user?.id ?? null, id));
-});
+}, { feature: "play" });
