@@ -43,6 +43,17 @@ export async function retryRefunds(now: Date): Promise<number> {
   return n;
 }
 
+/** 만료된 로그인 세션(회원·직원·강사)을 지운다. 지운 수. */
+export async function purgeExpiredSessions(now: Date): Promise<number> {
+  const where = { expires_at: { lt: now } };
+  const [u, s, i] = await db.$transaction([
+    db.session.deleteMany({ where }),
+    db.staffSession.deleteMany({ where }),
+    db.instructorSession.deleteMany({ where }),
+  ]);
+  return u.count + s.count + i.count;
+}
+
 /** 작업 목록 (이 순서로 돈다). 이후 작업(구독 갱신·정산·웹훅 등)은 여기에 더한다. */
 export const JOBS: Record<string, (now: Date) => Promise<number>> = {
   reconcilePending,
@@ -56,6 +67,7 @@ export const JOBS: Record<string, (now: Date) => Promise<number>> = {
   advanceLiveStatus,
   // 정산: 달이 바뀐 뒤 첫 작업에서 전월분 (KST)
   monthlySettlement,
+  purgeExpiredSessions,
 };
 
 /**

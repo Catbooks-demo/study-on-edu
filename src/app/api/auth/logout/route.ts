@@ -5,6 +5,6 @@ import { readCookie, route } from "@/server/http";
 export const POST = route(async (req) => {
   await revokeUserSession(readCookie(req, USER_COOKIE));
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(USER_COOKIE, "", cookieOptions(0));
+  res.cookies.set(USER_COOKIE, "", cookieOptions(0, req));
   return res;
 });

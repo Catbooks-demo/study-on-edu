@@ -10,6 +10,6 @@ export const POST = route(async (req) => {
   const staff = await staffLogin(email, password);
   const token = await issueStaffSession(staff.id);
   const res = NextResponse.json({ staff: publicStaff(staff) });
-  res.cookies.set(STAFF_COOKIE, token, cookieOptions(STAFF_SESSION_HOURS * 3600));
+  res.cookies.set(STAFF_COOKIE, token, cookieOptions(STAFF_SESSION_HOURS * 3600, req));
   return res;
 });

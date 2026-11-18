@@ -10,6 +10,6 @@ export const POST = route(async (req) => {
   const user = await login(email, password);
   const token = await issueUserSession(user.id);
   const res = NextResponse.json({ user: publicUser(user) });
-  res.cookies.set(USER_COOKIE, token, cookieOptions(USER_SESSION_DAYS * 86_400));
+  res.cookies.set(USER_COOKIE, token, cookieOptions(USER_SESSION_DAYS * 86_400, req));
   return res;
 });

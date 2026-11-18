@@ -15,8 +15,13 @@ export const INSTRUCTOR_SESSION_HOURS = 12;
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 const newToken = () => randomBytes(32).toString("base64url");
 
-export function cookieOptions(maxAgeSec: number) {
-  const secure = getEnv().APP_BASE_URL.startsWith("https://");
+/**
+ * 로그인 쿠키 설정. 주소가 https이거나, 앞단 프록시가 https로 받았다고 알려 주면(x-forwarded-proto) Secure를 붙인다.
+ * 운영(https) 뒤에서 http로 받는 앱도 Secure 쿠키를 내보내게 하려는 것. localhost http 개발은 Secure 없이.
+ */
+export function cookieOptions(maxAgeSec: number, req?: Request) {
+  const proto = req?.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  const secure = getEnv().APP_BASE_URL.startsWith("https://") || proto === "https";
   return { httpOnly: true, sameSite: "lax" as const, secure, path: "/", maxAge: maxAgeSec };
 }
 

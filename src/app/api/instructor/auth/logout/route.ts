@@ -5,6 +5,6 @@ import { readCookie, route } from "@/server/http";
 export const POST = route(async (req) => {
   await revokeInstructorSession(readCookie(req, INSTRUCTOR_COOKIE));
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(INSTRUCTOR_COOKIE, "", cookieOptions(0));
+  res.cookies.set(INSTRUCTOR_COOKIE, "", cookieOptions(0, req));
   return res;
 });
