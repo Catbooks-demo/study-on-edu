@@ -32,7 +32,10 @@ export default async function MyPage() {
           <h1 className="text-2xl font-extrabold tracking-tight">{user.name}님의 마이페이지</h1>
           <p className="mt-1 text-sm text-slate-500">{user.email}</p>
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-3">
+          <Link href="/my/subscription" className="text-sm font-semibold text-brand-600 hover:underline">구독 관리</Link>
+          <LogoutButton />
+        </div>
       </div>
 
       <section className="mt-8" aria-labelledby="classroom">

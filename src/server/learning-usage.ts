@@ -22,3 +22,17 @@ export async function usageFor(userId: string, courseIds: string[]): Promise<Lec
     return { duration_sec: l.duration_sec, watched_sec: p?.watched_sec ?? 0, downloaded: !!p?.downloaded_at };
   });
 }
+
+/**
+ * 구독 환불·정산용: 그 구독 수강생이 [from, to) 동안 구독 수강권으로 새로 본 초 (watch_events.added_sec 합).
+ * 재시도로 두 번 온 하트비트는 added_sec 0이라 부풀지 않는다.
+ */
+export async function subscriptionWatchedSec(subId: string, from: Date, to: Date): Promise<number> {
+  const sub = await db.subscription.findUnique({ where: { id: subId }, select: { user_id: true } });
+  if (!sub) return 0;
+  const r = await db.watchEvent.aggregate({
+    where: { user_id: sub.user_id, source: "subscription", created_at: { gte: from, lt: to } },
+    _sum: { added_sec: true },
+  });
+  return r._sum.added_sec ?? 0;
+}

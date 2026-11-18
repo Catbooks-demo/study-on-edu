@@ -187,7 +187,7 @@ export default async function Home() {
                       <li key={l.id} className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-200">
                         <span className="w-12 shrink-0 text-lg font-extrabold tabular-nums">{hm(l.starts_at)}</span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-semibold">{l.title}</span>
+                          <Link href={`/live/${l.id}`} className="block truncate font-semibold hover:text-brand-700">{l.title}</Link>
                           <span className="flex items-center gap-1.5 text-xs text-slate-500">
                             <InstructorAvatar slug={l.instructor.slug} name={l.instructor.display_name} size={16} />
                             {l.instructor.display_name}

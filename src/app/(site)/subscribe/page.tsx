@@ -7,7 +7,7 @@ import { subscriptionInfo } from "@/server/catalog";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "전체 이용 구독" };
 
-/** 구독 소개. 가입·결제는 Task 15에서 붙인다. */
+/** 구독 소개. 플랜을 고르면 /subscribe/checkout에서 신청·결제한다. */
 export default async function SubscribePage() {
   const { plans, courseCount, publishedCount } = await subscriptionInfo();
   const monthly = plans.find((p) => p.code === "monthly");
@@ -39,7 +39,7 @@ export default async function SubscribePage() {
                   <li>✓ 기간이 끝나기 하루 전 자동 결제</li>
                   <li>✓ 해지 예약·일시정지(1년 2번, 최대 30일)</li>
                 </ul>
-                <button type="button" disabled className="btn-primary mt-6 w-full">구독 신청은 곧 열려요</button>
+                <Link href={`/subscribe/checkout?plan=${p.code}`} className="btn-primary mt-6 w-full">{p.name} 시작하기</Link>
               </li>
             );
           })}

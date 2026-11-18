@@ -29,6 +29,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             <Link href="/courses" className="rounded-md px-2.5 py-1.5 hover:bg-slate-100">전체 강의</Link>
             <Link href="/bundles" className="hidden rounded-md px-2.5 py-1.5 hover:bg-slate-100 sm:inline">패키지</Link>
             <Link href="/subscribe" className="hidden rounded-md px-2.5 py-1.5 font-semibold text-brand-700 hover:bg-brand-50 sm:inline">구독</Link>
+            <Link href="/live" className="hidden rounded-md px-2.5 py-1.5 hover:bg-slate-100 md:inline">라이브</Link>
             <Link href="/support" className="hidden rounded-md px-2.5 py-1.5 hover:bg-slate-100 lg:inline">고객센터</Link>
             {user ? (
               <>

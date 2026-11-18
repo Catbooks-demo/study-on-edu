@@ -1,8 +1,10 @@
 import { db } from "../db";
+import { advanceLiveStatus } from "../live";
 import { log } from "../log";
 import { cancelPendingOrder, lockOrder } from "../orders";
 import { reconcilePending } from "../payments";
 import { settleRefund, stuckRefundIds } from "../refunds";
+import { endSubscriptions, renewSubscriptions, resumePaused, retryFailedInvoices } from "../subscriptions";
 import { withJobLock } from "./lock";
 
 /**
@@ -45,6 +47,12 @@ export const JOBS: Record<string, (now: Date) => Promise<number>> = {
   reconcilePending,
   expireOrders,
   retryRefunds,
+  // 구독: 정지가 풀린 것을 먼저 살리고, 해지 예약을 끝낸 뒤 갱신·재시도
+  resumePaused,
+  endSubscriptions,
+  renewSubscriptions,
+  retryFailedInvoices,
+  advanceLiveStatus,
 };
 
 /**

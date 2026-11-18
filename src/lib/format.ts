@@ -82,3 +82,15 @@ export const ENROLLMENT_SOURCE_LABEL: Record<string, string> = { order: "구매"
 
 /** 비율 → "3.0%" */
 export const pct1 = (r: number) => `${(r * 100).toFixed(1)}%`;
+
+/** 구독 상태 표기. */
+export const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
+  active: "이용 중",
+  past_due: "결제 밀림",
+  paused: "일시정지",
+  cancelled: "해지됨",
+  expired: "종료",
+};
+
+/** 구독 청구 상태 표기. */
+export const INVOICE_STATUS_LABEL: Record<string, string> = { pending: "결제 대기", paid: "결제 완료", failed: "결제 실패", refunded: "환불 완료" };
