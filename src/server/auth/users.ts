@@ -13,7 +13,7 @@ export const phoneSchema = z
 export const INTEREST_CODES = ["DEV", "DATA", "CERT", "LANG", "DSGN", "BIZ", "EXAM"] as const;
 
 export const signupSchema = z.object({
-  email: z.string().trim().toLowerCase().email("이메일 형식을 확인해 주세요."),
+  email: z.string().trim().toLowerCase().email("이메일 형식을 확인해 주세요.").max(254, "이메일을 확인해 주세요."),
   password: z.string().min(8, "비밀번호는 8자 이상으로 정해 주세요.").max(100),
   name: z.string().trim().min(1, "이름을 넣어 주세요.").max(30),
   phone: phoneSchema,
@@ -25,8 +25,8 @@ export const signupSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().min(1, "이메일을 넣어 주세요."),
-  password: z.string().min(1, "비밀번호를 넣어 주세요."),
+  email: z.string().trim().toLowerCase().min(1, "이메일을 넣어 주세요.").max(254, "이메일을 확인해 주세요."),
+  password: z.string().min(1, "비밀번호를 넣어 주세요.").max(100, "비밀번호를 확인해 주세요."),
 });
 
 export type PublicUser = Pick<User, "id" | "email" | "name" | "phone" | "birth_year" | "interests" | "marketing_opt_in">;

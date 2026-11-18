@@ -64,14 +64,19 @@ export async function readJson<T extends z.ZodType>(req: Request, schema: T): Pr
   return parsed.data;
 }
 
-/** 쿠키 하나 읽기 (Request 헤더에서). */
+/** 쿠키 하나 읽기 (Request 헤더에서). 깨진 %-인코딩은 없는 쿠키로 본다(500이 나지 않게). */
 export function readCookie(req: Request, name: string): string | undefined {
   const raw = req.headers.get("cookie");
   if (!raw) return undefined;
   for (const part of raw.split(";")) {
     const i = part.indexOf("=");
     if (i < 0) continue;
-    if (part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+    if (part.slice(0, i).trim() !== name) continue;
+    try {
+      return decodeURIComponent(part.slice(i + 1).trim());
+    } catch {
+      return undefined;
+    }
   }
   return undefined;
 }

@@ -44,3 +44,18 @@ export function durationKo(sec: number): string {
   if (!h) return `${m}분`;
   return m ? `${h}시간 ${m}분` : `${h}시간`;
 }
+
+/** 난이도 표기. */
+export const LEVEL_LABEL: Record<string, string> = { beginner: "입문", intermediate: "중급", advanced: "고급" };
+
+/** 수강 기간 표기: null → 평생, 365 → 1년, 90 → 90일 */
+export function accessLabel(days: number | null): string {
+  if (days === null) return "평생 소장";
+  if (days % 365 === 0) return `${days / 365}년`;
+  return `${days}일`;
+}
+
+/** 할인율 (정수 %, 내림): 99,000 → 69,000이면 30 */
+export function discountPct(list: number, unit: number): number {
+  return list > 0 ? Math.floor(((list - unit) * 100) / list) : 0;
+}
