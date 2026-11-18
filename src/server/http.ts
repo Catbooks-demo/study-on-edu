@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { log } from "./log";
+import { recordRequest, routeGroup } from "./metrics";
 
 /** 수강생·강사·직원에게 보여 줄 수 있는 오류. 본문은 `{error:{code,message}}`. */
 export class HttpError extends Error {
@@ -17,7 +19,7 @@ export class HttpError extends Error {
   }
 }
 
-export function errorResponse(e: unknown): NextResponse {
+export function errorResponse(e: unknown, reqId?: string): NextResponse {
   if (e instanceof HttpError) {
     if (e.status === 429 && e.retryAt) {
       const after = e.retryAfterSec ?? Math.max(1, Math.ceil((e.retryAt.getTime() - Date.now()) / 1000));
@@ -28,7 +30,7 @@ export function errorResponse(e: unknown): NextResponse {
     }
     return NextResponse.json({ error: { code: e.code, message: e.message } }, { status: e.status });
   }
-  log.error("처리 중 오류", { error: e instanceof Error ? e.stack ?? e.message : String(e) });
+  log.error("처리 중 오류", { req_id: reqId, error: e instanceof Error ? e.stack ?? e.message : String(e) });
   return NextResponse.json(
     { error: { code: "INTERNAL", message: "잠시 후 다시 시도해 주세요." } },
     { status: 500 },
@@ -37,14 +39,51 @@ export function errorResponse(e: unknown): NextResponse {
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 
-/** 오류를 JSON 응답으로 바꿔 주는 감싸기. */
-export function route<C = unknown>(fn: Handler<C>): Handler<C> {
+export interface RouteOptions {
+  /** 지표·로그의 경로 묶음. 없으면 요청 경로에서 routeGroup으로 만든다. */
+  group?: string;
+}
+
+const REQ_ID_RE = /^[A-Za-z0-9._-]{1,64}$/;
+
+/** 받은 x-request-id가 안전한 모양이면 그대로, 아니면 새로 만든다. */
+export function requestId(req: Request): string {
+  const got = req.headers.get("x-request-id");
+  return got && REQ_ID_RE.test(got) ? got : randomUUID();
+}
+
+function withHeader(res: Response, name: string, value: string): Response {
+  try {
+    res.headers.set(name, value);
+    return res;
+  } catch {
+    // Response.redirect 같은 응답은 헤더를 못 바꾸므로 새 응답으로 감싼다
+    const copy = new Response(res.body, res);
+    copy.headers.set(name, value);
+    return copy;
+  }
+}
+
+/**
+ * 모든 API 감싸기: 오류를 JSON 응답으로 바꾸고, 요청 id(x-request-id)를 붙이고,
+ * 지표(경로 묶음·상태·시간)를 기록하고, 요청마다 JSON 한 줄 로그를 남긴다.
+ * 로그에는 쿠키·쿼리 문자열·본문을 넣지 않는다.
+ */
+export function route<C = unknown>(fn: Handler<C>, opts: RouteOptions = {}): Handler<C> {
   return async (req, ctx) => {
+    const started = performance.now();
+    const reqId = requestId(req);
+    const group = opts.group ?? routeGroup(new URL(req.url).pathname);
+    let res: Response;
     try {
-      return await fn(req, ctx);
+      res = await fn(req, ctx);
     } catch (e) {
-      return errorResponse(e);
+      res = errorResponse(e, reqId);
     }
+    const ms = Math.round(performance.now() - started);
+    recordRequest(group, req.method, res.status, ms);
+    log.info("요청", { req_id: reqId, group, method: req.method, status: res.status, ms });
+    return withHeader(res, "x-request-id", reqId);
   };
 }
 

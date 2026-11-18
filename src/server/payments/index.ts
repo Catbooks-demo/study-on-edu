@@ -239,7 +239,7 @@ export async function chargeMockInvoice(invoiceId: string, now: Date, rand: () =
   if (!inv) throw new HttpError(404, "NOT_FOUND", "청구를 찾지 못했어요.");
   if (inv.status === "paid") return { ok: true };
   const failCard = inv.subscription.card_last4 === FAIL_CARD_LAST4;
-  const injected = !failCard && rand() < paymentFailRate();
+  const injected = !failCard && rand() < (await paymentFailRate());
   if (failCard || injected) {
     const reason = failCard ? "시연용 실패 카드(끝 4000)라 승인되지 않았어요." : "결제사 승인 실패 (시연용 장애 주입)";
     await db.$transaction([

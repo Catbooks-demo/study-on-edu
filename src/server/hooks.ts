@@ -1,23 +1,23 @@
+import { incPayment, observeJob } from "./metrics";
+
 /**
- * 지표·장애 주입 훅 자리. 지금은 아무것도 하지 않는다.
- * Task 20(지표)이 onPaymentAttempt·onJobRun을, Task 21(장애 주입)이 paymentFailRate를 채운다.
+ * 결제·작업·구독이 운영 기능(지표·장애 주입·웹훅)에 알리는 자리.
+ * 결제·작업 모듈은 이 파일만 알고, 지표·장애 주입·웹훅 모듈을 직접 부르지 않는다.
  */
 
 /** 결제 시도 하나가 끝났을 때 (method: toss·mock). */
 export function onPaymentAttempt(method: string, ok: boolean): void {
-  void method;
-  void ok;
+  incPayment(method, ok);
 }
 
 /** 주기 작업 하나가 끝났을 때. */
 export function onJobRun(name: string, ms: number, ok: boolean): void {
-  void name;
-  void ms;
   void ok;
+  observeJob(name, ms);
 }
 
-/** 시연용 결제 승인 실패율 (0~1). 장애 주입이 꺼져 있으면 0. */
-export function paymentFailRate(): number {
+/** 시연용 결제 승인 실패율 (0~1). 장애 주입이 꺼져 있으면 0. (Task 21이 채운다) */
+export async function paymentFailRate(): Promise<number> {
   return 0;
 }
 

@@ -58,7 +58,7 @@ describe("지표", () => {
     const read = await issueApiKey("읽기", ["read"]);
     expect((await call(metricsRoute, { headers: auth(read.key) })).status).toBe(403);
     const m = await issueApiKey("프로메테우스", ["metrics"]);
-    const res = await metricsRoute(new Request("http://localhost/metrics", { headers: auth(m.key) }));
+    const res = await metricsRoute(new Request("http://localhost/metrics", { headers: auth(m.key) }), {} as never);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/plain");
     const text = await res.text();
