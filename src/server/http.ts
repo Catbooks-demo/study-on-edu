@@ -4,6 +4,10 @@ import { log } from "./log";
 
 /** 수강생·강사·직원에게 보여 줄 수 있는 오류. 본문은 `{error:{code,message}}`. */
 export class HttpError extends Error {
+  /** 429일 때: 다시 시도할 수 있는 시각과 그때까지 남은 초. */
+  retryAt?: Date;
+  retryAfterSec?: number;
+
   constructor(
     public status: number,
     public code: string,
@@ -15,6 +19,13 @@ export class HttpError extends Error {
 
 export function errorResponse(e: unknown): NextResponse {
   if (e instanceof HttpError) {
+    if (e.status === 429 && e.retryAt) {
+      const after = e.retryAfterSec ?? Math.max(1, Math.ceil((e.retryAt.getTime() - Date.now()) / 1000));
+      return NextResponse.json(
+        { error: { code: e.code, message: e.message, retry_at: e.retryAt.toISOString() } },
+        { status: 429, headers: { "Retry-After": String(after) } },
+      );
+    }
     return NextResponse.json({ error: { code: e.code, message: e.message } }, { status: e.status });
   }
   log.error("처리 중 오류", { error: e instanceof Error ? e.stack ?? e.message : String(e) });
