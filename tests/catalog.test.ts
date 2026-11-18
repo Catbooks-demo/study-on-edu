@@ -166,6 +166,23 @@ describe("메인·강사·패키지·고객센터", () => {
     expect(h.notices.length).toBeGreaterThan(0);
   });
 
+  it("home instructor highlights sorted by review count", async () => {
+    const h = await homeSections(now);
+    expect(h.instructors).toHaveLength(6);
+    for (let i = 1; i < h.instructors.length; i++) {
+      expect(h.instructors[i].review_count).toBeLessThanOrEqual(h.instructors[i - 1].review_count);
+    }
+    for (const i of h.instructors) expect(i.top).not.toBeNull();
+  });
+
+  it("course detail carries the preview lecture script", async () => {
+    const [first] = (await searchCourses({}, now)).items;
+    const d = await getCourse(first.code, now);
+    expect(d!.preview).not.toBeNull();
+    expect(d!.preview!.script!.slides.length).toBeGreaterThanOrEqual(4);
+    expect(d!.preview!.script!.captions.length).toBeGreaterThan(0);
+  });
+
   it("instructor page lists only published courses", async () => {
     const inst = await db.instructor.findFirstOrThrow({ where: { courses: { some: { status: "in_review" } } } });
     const p = await getInstructorPage(inst.slug, now);

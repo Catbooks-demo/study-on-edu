@@ -28,3 +28,42 @@ test("terms pages linked from signup exist", async ({ page }) => {
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   }
 });
+
+test.describe("generated media", () => {
+  test("hero plays on canvas; reduced motion shows a static poster", async ({ page, browser }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("hero-player").getByTestId("preview-canvas")).toBeVisible();
+    await expect(page.getByTestId("exam-ticket")).toHaveCount(4);
+    await expect(page.getByTestId("instructor-highlight").first()).toContainText("시연용 가상 강사");
+
+    const reduced = await browser.newContext({ reducedMotion: "reduce" });
+    const p2 = await reduced.newPage();
+    await p2.goto("/");
+    await expect(p2.getByTestId("hero-player").getByTestId("preview-poster")).toBeVisible();
+    await expect(p2.getByTestId("hero-player").locator("canvas")).toHaveCount(0);
+    await reduced.close();
+  });
+
+  test("card hover starts a short preview loop", async ({ page }) => {
+    await page.goto("/courses?category=DEV");
+    const card = page.getByTestId("course-card").first();
+    await card.hover();
+    await expect(card.getByTestId("card-preview").locator("canvas")).toBeVisible();
+  });
+
+  test("course detail 맛보기 player plays", async ({ page }) => {
+    await page.goto("/courses?category=DATA");
+    await page.getByTestId("course-card").first().click();
+    const player = page.getByTestId("preview-player");
+    await expect(player.getByTestId("preview-canvas")).toBeVisible();
+    await player.getByRole("button", { name: "재생" }).click();
+    await expect(player.getByRole("button", { name: "일시정지" })).toBeVisible();
+  });
+
+  test("main page screenshot", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/");
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: "screens/home.png", fullPage: true });
+  });
+});
