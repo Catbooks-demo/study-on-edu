@@ -20,3 +20,10 @@ export function onJobRun(name: string, ms: number, ok: boolean): void {
 export function paymentFailRate(): number {
   return 0;
 }
+
+/** 구독 상태가 바뀌었을 때 (Task 25 웹훅이 채운다). */
+export function onSubscriptionStatus(sub: { id: string; user_id: string }, from: string, to: string): void {
+  void sub;
+  void from;
+  void to;
+}

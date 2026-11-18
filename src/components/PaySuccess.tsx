@@ -14,8 +14,8 @@ export function PaySuccess({ orderId, paymentKey, amount }: { orderId: string; p
   useEffect(() => {
     if (sent.current) return;
     sent.current = true;
-    api<{ order: { code: string } | null }>("/api/payments/confirm", { orderId, paymentKey, amount })
-      .then((r) => router.replace(r.order ? `/orders/${r.order.code}/done` : "/my"))
+    api<{ order: { code: string } | null; invoice: { id: string } | null }>("/api/payments/confirm", { orderId, paymentKey, amount })
+      .then((r) => router.replace(r.order ? `/orders/${r.order.code}/done` : r.invoice ? "/my/subscription" : "/my"))
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, [orderId, paymentKey, amount, router]);
 
