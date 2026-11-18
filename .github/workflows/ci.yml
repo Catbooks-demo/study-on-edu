@@ -81,7 +81,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma migrate deploy
-      # 시드(npm run db:seed)는 Task 4에서 넣는다.
+      - name: 시드
+        run: npm run db:seed
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
