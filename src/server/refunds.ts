@@ -319,6 +319,8 @@ export async function requestSubscriptionRefund(userId: string, subId: string, r
 /** 구독 환불 승인 때: 구독을 바로 cancelled로 (구독 수강권 만료, 남은 대기 청구는 failed). */
 async function cancelForRefund(tx: Tx, invoiceId: string, now: Date): Promise<void> {
   const inv = await tx.subscriptionInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
+  // 갱신·재시도와 같은 구독 잠금: 진행 중인 갱신 결제가 끝난 뒤에 해지한다(해지된 구독이 다시 active가 되지 않게).
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`sub:${inv.subscription_id}`}))`;
   await tx.$queryRaw`SELECT id FROM subscriptions WHERE id = ${inv.subscription_id} FOR UPDATE`;
   const sub = await tx.subscription.findUniqueOrThrow({ where: { id: inv.subscription_id } });
   if (!ALIVE.includes(sub.status)) return;
