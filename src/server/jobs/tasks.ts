@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { advanceLiveStatus } from "../live";
 import { log } from "../log";
 import { cancelPendingOrder, lockOrder } from "../orders";
 import { reconcilePending } from "../payments";
@@ -51,6 +52,7 @@ export const JOBS: Record<string, (now: Date) => Promise<number>> = {
   endSubscriptions,
   renewSubscriptions,
   retryFailedInvoices,
+  advanceLiveStatus,
 };
 
 /**
