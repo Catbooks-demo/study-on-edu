@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 스터디온에듀 고유 색: 짙은 보라(주색 #5B3DF5), 레몬(강조 #F5C518), 바탕 #FAFAF7 */
+  --color-brand-50: #f1eeff;
+  --color-brand-100: #e3ddff;
+  --color-brand-200: #c8bbff;
+  --color-brand-300: #a491fd;
+  --color-brand-400: #7f66f9;
+  --color-brand-500: #5b3df5;
+  --color-brand-600: #4a2ee0;
+  --color-brand-700: #3c24b8;
+  --color-brand-800: #301e8f;
+  --color-brand-900: #241769;
+  --color-lemon-300: #fad96a;
+  --color-lemon-400: #f7cf3f;
+  --color-lemon-500: #f5c518;
+  --color-lemon-600: #d6a90a;
+  --color-paper: #fafaf7;
+  --color-ink: #1b1a2e;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  @apply bg-paper text-ink antialiased;
+  word-break: keep-all;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand-500 text-white hover:bg-brand-600;
+}
+@utility btn-accent {
+  @apply btn bg-lemon-500 text-ink hover:bg-lemon-400;
+}
+@utility btn-line {
+  @apply btn border border-slate-300 bg-white text-ink hover:border-brand-500 hover:text-brand-600;
+}
+@utility field {
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-slate-700;
+}
+@utility price {
+  @apply font-bold tabular-nums text-ink;
+}
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

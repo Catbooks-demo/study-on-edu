@@ -1,0 +1,40 @@
+# 스터디온에듀 한 대 실행: PostgreSQL + 앱. 설정은 .env (예시: .env.example).
+# 앱은 이 서버 안(127.0.0.1)에서만 열린다. 바깥에서는 nginx를 거쳐 들어온다.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studyon
+      POSTGRES_DB: studyon
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?.env에 POSTGRES_PASSWORD를 넣어 주세요}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studyon -d studyon"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    image: study-on-edu:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # .env의 DATABASE_URL 대신 compose 안의 db를 쓴다
+      DATABASE_URL: postgresql://studyon:${POSTGRES_PASSWORD}@db:5432/studyon
+    ports:
+      - "127.0.0.1:${APP_PORT:-3200}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  pgdata:

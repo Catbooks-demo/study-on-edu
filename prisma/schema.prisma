@@ -1,0 +1,1025 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 금액은 모두 정수 원. 시각은 UTC로 저장하고 화면·날짜 계산은 한국 시간.
+// 표·컬럼 이름은 영어 snake_case. 상태 값은 영어 코드.
+// Prisma로 쓸 수 없는 부분 unique 인덱스는 마이그레이션 SQL에 직접 있다(devices·refunds).
+
+// ───────────────────────── 카탈로그 ─────────────────────────
+
+model Category {
+  id         String   @id @default(cuid())
+  code       String   @unique // DEV, DATA, CERT, LANG, DSGN, BIZ, EXAM
+  name       String
+  sort       Int      @default(0)
+  courses    Course[]
+  created_at DateTime @default(now())
+
+  @@map("categories")
+}
+
+model Tag {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  courses    CourseTag[]
+  created_at DateTime    @default(now())
+
+  @@map("tags")
+}
+
+model CourseTag {
+  course_id  String
+  tag_id     String
+  course     Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  @@id([course_id, tag_id])
+  @@index([tag_id])
+  @@map("course_tags")
+}
+
+model Instructor {
+  id            String           @id @default(cuid())
+  slug          String           @unique
+  display_name  String // 가상 활동명
+  bio           String
+  account_last4 String? // 정산 계좌 끝 4자리만
+  status        String           @default("active") // active, suspended
+  users         InstructorUser[]
+  courses       Course[]
+  coupons       Coupon[]
+  live_sessions LiveSession[]
+  settlements   Settlement[]
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+
+  @@index([updated_at])
+  @@map("instructors")
+}
+
+model InstructorUser {
+  id            String              @id @default(cuid())
+  email         String              @unique
+  password_hash String
+  instructor_id String
+  instructor    Instructor          @relation(fields: [instructor_id], references: [id], onDelete: Cascade)
+  sessions      InstructorSession[]
+  created_at    DateTime            @default(now())
+  updated_at    DateTime            @updatedAt
+
+  @@index([instructor_id])
+  @@map("instructor_users")
+}
+
+model InstructorSession {
+  token_hash         String         @id
+  instructor_user_id String
+  instructor_user    InstructorUser @relation(fields: [instructor_user_id], references: [id], onDelete: Cascade)
+  expires_at         DateTime
+  created_at         DateTime       @default(now())
+
+  @@index([instructor_user_id])
+  @@map("instructor_sessions")
+}
+
+// ───────────────────────── 강의 ─────────────────────────
+
+model Course {
+  id              String            @id @default(cuid())
+  code            String            @unique // SO-DEV-0001
+  title           String
+  subtitle        String            @default("")
+  category_id     String
+  category        Category          @relation(fields: [category_id], references: [id])
+  instructor_id   String
+  instructor      Instructor        @relation(fields: [instructor_id], references: [id])
+  level           String // beginner, intermediate, advanced
+  price           Int
+  sale_price      Int?
+  sale_ends_at    DateTime?
+  access_days     Int?              @default(365) // null = 평생
+  status          String            @default("draft") // draft, in_review, published, rejected, hidden
+  reject_reason   String?
+  intro           String            @default("")
+  audience        String[]
+  prerequisites   String[]
+  faq             Json              @default("[]") // [{q, a}]
+  in_subscription Boolean           @default(false)
+  rating_avg      Float             @default(0)
+  rating_count    Int               @default(0)
+  published_at    DateTime?
+  tags            CourseTag[]
+  sections        Section[]
+  lectures        Lecture[]
+  bundles         BundleCourse[]
+  cart_items      CartItem[]
+  order_items     OrderItem[]
+  enrollments     Enrollment[]
+  progress        LectureProgress[]
+  watch_events    WatchEvent[]
+  notes           Note[]
+  certificates    Certificate[]
+  questions       Question[]
+  reviews         Review[]
+  live_sessions   LiveSession[]
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+
+  @@index([category_id, status])
+  @@index([instructor_id])
+  @@index([status])
+  @@index([updated_at])
+  @@map("courses")
+}
+
+model Section {
+  id         String    @id @default(cuid())
+  course_id  String
+  course     Course    @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  title      String
+  sort       Int
+  lectures   Lecture[]
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  @@index([course_id, sort])
+  @@map("sections")
+}
+
+model Lecture {
+  id           String            @id @default(cuid())
+  section_id   String
+  section      Section           @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  course_id    String
+  course       Course            @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  title        String
+  sort         Int
+  duration_sec Int
+  is_preview   Boolean           @default(false)
+  has_resource Boolean           @default(false)
+  script       Json              @default("{}") // {slides:[{at,title,bullets[]}], captions:[{at,text}]}
+  progress     LectureProgress[]
+  watch_events WatchEvent[]
+  notes        Note[]
+  questions    Question[]
+  replay_of    LiveSession[]
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+
+  @@index([course_id, sort])
+  @@index([section_id, sort])
+  @@map("lectures")
+}
+
+// ───────────────────────── 상품 ─────────────────────────
+
+model Bundle {
+  id          String         @id @default(cuid())
+  code        String         @unique
+  title       String
+  summary     String         @default("")
+  price       Int
+  access_days Int?           @default(365) // null = 평생
+  active      Boolean        @default(true)
+  courses     BundleCourse[]
+  cart_items  CartItem[]
+  order_items OrderItem[]
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+
+  @@index([updated_at])
+  @@map("bundles")
+}
+
+model BundleCourse {
+  bundle_id  String
+  course_id  String
+  bundle     Bundle   @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [course_id], references: [id])
+  sort       Int      @default(0)
+  created_at DateTime @default(now())
+
+  @@id([bundle_id, course_id])
+  @@index([course_id])
+  @@map("bundle_courses")
+}
+
+model Plan {
+  id                String         @id @default(cuid())
+  code              String         @unique // monthly, yearly
+  name              String
+  interval          String // month, year
+  price             Int
+  refund_base_hours Int // 구독 환불 기준 시간 (월 20, 연 240)
+  active            Boolean        @default(true)
+  subscriptions     Subscription[]
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  @@map("plans")
+}
+
+// ───────────────────────── 회원 ─────────────────────────
+
+model User {
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  password_hash      String
+  name               String
+  phone              String
+  birth_year         Int?
+  interests          String[]
+  marketing_opt_in   Boolean            @default(false)
+  sessions           Session[]
+  devices            Device[]
+  lease              PlaybackLease?
+  cart_items         CartItem[]
+  orders             Order[]
+  coupon_redemptions CouponRedemption[]
+  subscriptions      Subscription[]
+  enrollments        Enrollment[]
+  progress           LectureProgress[]
+  watch_events       WatchEvent[]
+  notes              Note[]
+  certificates       Certificate[]
+  questions          Question[]
+  reviews            Review[]
+  inquiries          Inquiry[]
+  messages           Message[]
+  live_seats         LiveSeat[]
+  live_chats         LiveChat[]
+  refunds            Refund[]
+  created_at         DateTime           @default(now())
+  updated_at         DateTime           @updatedAt
+
+  @@index([updated_at])
+  @@map("users")
+}
+
+model Session {
+  token_hash String   @id
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@map("sessions")
+}
+
+model Device {
+  id            String       @id @default(cuid())
+  user_id       String
+  user          User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  device_key    String // 브라우저가 만든 무작위 id (so_device 쿠키)
+  name          String
+  first_seen_at DateTime     @default(now())
+  last_seen_at  DateTime     @default(now())
+  revoked_at    DateTime?
+  watch_events  WatchEvent[]
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+
+  // 부분 unique (user_id, device_key) WHERE revoked_at IS NULL 은 마이그레이션 SQL에 있다.
+  @@index([user_id])
+  @@map("devices")
+}
+
+/// 한 계정의 재생 소유권 (동시 재생 1개).
+model PlaybackLease {
+  user_id    String   @id
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  device_id  String
+  lecture_id String
+  beat_at    DateTime
+
+  @@index([beat_at])
+  @@map("playback_leases")
+}
+
+// ───────────────────────── 주문·결제 ─────────────────────────
+
+model CartItem {
+  id         String   @id @default(cuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  course_id  String?
+  course     Course?  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  bundle_id  String?
+  bundle     Bundle?  @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  @@unique([user_id, course_id])
+  @@unique([user_id, bundle_id])
+  @@map("cart_items")
+}
+
+model Order {
+  id                 String             @id @default(cuid())
+  code               String             @unique // SO + KST yyMMdd + 4자리
+  user_id            String
+  user               User               @relation(fields: [user_id], references: [id])
+  list_total         Int // 정가 합
+  discount_total     Int                @default(0) // 할인가로 줄어든 금액 합
+  coupon_id          String?
+  coupon             Coupon?            @relation(fields: [coupon_id], references: [id])
+  coupon_discount    Int                @default(0)
+  payable            Int // 결제액
+  refunded_amount    Int                @default(0)
+  status             String             @default("pending") // pending, paid, cancelled, partially_refunded, refunded
+  paid_at            DateTime?
+  expires_at         DateTime // 결제 전 주문 만료 (30분)
+  items              OrderItem[]
+  payments           Payment[]
+  coupon_redemptions CouponRedemption[]
+  created_at         DateTime           @default(now())
+  updated_at         DateTime           @updatedAt
+
+  @@index([user_id])
+  @@index([status, expires_at])
+  @@index([updated_at])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String       @id @default(cuid())
+  order_id        String
+  order           Order        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  kind            String // course, bundle
+  course_id       String?
+  course          Course?      @relation(fields: [course_id], references: [id])
+  bundle_id       String?
+  bundle          Bundle?      @relation(fields: [bundle_id], references: [id])
+  list_price      Int // 정가
+  unit_price      Int // 주문 때 판매가 (할인가 반영)
+  coupon_share    Int          @default(0) // 이 항목에 나눈 쿠폰 할인
+  paid_amount     Int // 실제 낸 금액 = unit_price − coupon_share
+  refunded_amount Int          @default(0)
+  status          String       @default("active") // active, refunded
+  enrollments     Enrollment[]
+  refunds         Refund[]
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  @@index([order_id])
+  @@index([course_id])
+  @@index([bundle_id])
+  @@map("order_items")
+}
+
+/// 결제·환불 행. 쌓기만 하고 지우지 않는다.
+model Payment {
+  id               String               @id @default(cuid())
+  order_id         String?
+  order            Order?               @relation(fields: [order_id], references: [id])
+  invoice_id       String?
+  invoice          SubscriptionInvoice? @relation(fields: [invoice_id], references: [id])
+  kind             String // charge, refund
+  method           String // toss, mock
+  amount           Int // 항상 양수
+  status           String               @default("pending") // pending, approved, failed, cancelled
+  toss_order_id    String?              @unique
+  toss_payment_key String?
+  refund_of_id     String?
+  refund_of        Payment?             @relation("RefundOf", fields: [refund_of_id], references: [id])
+  refunds          Payment[]            @relation("RefundOf")
+  failure_reason   String?
+  approved_at      DateTime?
+  created_at       DateTime             @default(now())
+  updated_at       DateTime             @updatedAt
+
+  @@index([order_id])
+  @@index([invoice_id])
+  @@index([updated_at])
+  @@map("payments")
+}
+
+model Coupon {
+  id            String             @id @default(cuid())
+  code          String             @unique
+  name          String             @default("")
+  kind          String // fixed, percent
+  value         Int // fixed면 원, percent면 %
+  max_discount  Int?
+  min_amount    Int?
+  target        String             @default("all") // all, category, course, instructor
+  target_ref    String? // 카테고리 code·강의 code·강사 slug
+  starts_at     DateTime
+  ends_at       DateTime
+  per_user_once Boolean            @default(false)
+  total_limit   Int?
+  used_count    Int                @default(0)
+  referral      Boolean            @default(false) // 강사 추천 코드
+  instructor_id String?
+  instructor    Instructor?        @relation(fields: [instructor_id], references: [id])
+  active        Boolean            @default(true)
+  orders        Order[]
+  redemptions   CouponRedemption[]
+  created_at    DateTime           @default(now())
+  updated_at    DateTime           @updatedAt
+
+  @@index([updated_at])
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id         String   @id @default(cuid())
+  coupon_id  String
+  coupon     Coupon   @relation(fields: [coupon_id], references: [id])
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  order_id   String
+  order      Order    @relation(fields: [order_id], references: [id])
+  created_at DateTime @default(now())
+
+  @@unique([coupon_id, user_id])
+  @@index([order_id])
+  @@map("coupon_redemptions")
+}
+
+// ───────────────────────── 구독 ─────────────────────────
+
+model Subscription {
+  id                   String                @id @default(cuid())
+  user_id              String
+  user                 User                  @relation(fields: [user_id], references: [id])
+  plan_id              String
+  plan                 Plan                  @relation(fields: [plan_id], references: [id])
+  status               String                @default("active") // active, past_due, paused, cancelled, expired
+  current_period_start DateTime
+  current_period_end   DateTime
+  cancel_at_period_end Boolean               @default(false)
+  failure_count        Int                   @default(0)
+  first_failed_at      DateTime?
+  next_retry_at        DateTime?
+  paused_until         DateTime?
+  pauses               Json                  @default("[]") // [{start, days}]
+  card_label           String                @default("모의 카드")
+  card_last4           String                @default("0000")
+  cancelled_at         DateTime?
+  invoices             SubscriptionInvoice[]
+  enrollments          Enrollment[]
+  created_at           DateTime              @default(now())
+  updated_at           DateTime              @updatedAt
+
+  @@index([user_id])
+  @@index([status, current_period_end])
+  @@index([updated_at])
+  @@map("subscriptions")
+}
+
+model SubscriptionInvoice {
+  id              String       @id @default(cuid())
+  subscription_id String
+  subscription    Subscription @relation(fields: [subscription_id], references: [id])
+  period_start    DateTime
+  period_end      DateTime
+  amount          Int
+  status          String       @default("pending") // pending, paid, failed, refunded
+  attempts        Int          @default(0)
+  last_attempt_at DateTime?
+  paid_at         DateTime?
+  payments        Payment[]
+  refunds         Refund[]
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  @@unique([subscription_id, period_start])
+  @@index([status])
+  @@index([updated_at])
+  @@map("subscription_invoices")
+}
+
+// ───────────────────────── 학습 ─────────────────────────
+
+model Enrollment {
+  id              String        @id @default(cuid())
+  user_id         String
+  user            User          @relation(fields: [user_id], references: [id])
+  course_id       String
+  course          Course        @relation(fields: [course_id], references: [id])
+  source          String // order, bundle, subscription, free
+  order_item_id   String?
+  order_item      OrderItem?    @relation(fields: [order_item_id], references: [id])
+  subscription_id String?
+  subscription    Subscription? @relation(fields: [subscription_id], references: [id])
+  starts_at       DateTime
+  expires_at      DateTime? // null = 평생 또는 구독이 살아 있는 동안
+  status          String        @default("active") // active, expired, refunded
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+
+  @@unique([user_id, course_id])
+  @@index([course_id, created_at])
+  @@index([subscription_id])
+  @@index([order_item_id])
+  @@index([updated_at])
+  @@map("enrollments")
+}
+
+model LectureProgress {
+  id                String    @id @default(cuid())
+  user_id           String
+  user              User      @relation(fields: [user_id], references: [id])
+  lecture_id        String
+  lecture           Lecture   @relation(fields: [lecture_id], references: [id], onDelete: Cascade)
+  course_id         String
+  course            Course    @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  ranges            Json      @default("[]") // 본 구간 [[s,e],…] (영상 초)
+  watched_sec       Int       @default(0)
+  last_position_sec Int       @default(0)
+  completed_at      DateTime?
+  downloaded_at     DateTime?
+  last_watched_at   DateTime  @default(now())
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  @@unique([user_id, lecture_id])
+  @@index([user_id, course_id])
+  @@index([course_id])
+  @@index([updated_at])
+  @@map("lecture_progress")
+}
+
+/// 재생 하트비트 기록. added_sec 는 이번에 새로 더해진 초만.
+model WatchEvent {
+  id         String   @id @default(cuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  lecture_id String
+  lecture    Lecture  @relation(fields: [lecture_id], references: [id], onDelete: Cascade)
+  course_id  String
+  course     Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  device_id  String
+  device     Device   @relation(fields: [device_id], references: [id])
+  from_sec   Int
+  to_sec     Int
+  rate       Float
+  added_sec  Int
+  source     String // 수강권 출처: order, bundle, subscription, free
+  created_at DateTime @default(now())
+
+  @@index([course_id, created_at])
+  @@index([source, created_at])
+  @@index([user_id, created_at])
+  @@map("watch_events")
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lecture_id String
+  lecture    Lecture  @relation(fields: [lecture_id], references: [id], onDelete: Cascade)
+  course_id  String
+  course     Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  at_sec     Int
+  body       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id, course_id])
+  @@map("notes")
+}
+
+model Certificate {
+  id             String   @id @default(cuid())
+  number         String   @unique // SOC-2026-000001
+  user_id        String
+  user           User     @relation(fields: [user_id], references: [id])
+  course_id      String
+  course         Course   @relation(fields: [course_id], references: [id])
+  issued_at      DateTime @default(now())
+  progress_ratio Float
+  created_at     DateTime @default(now())
+
+  @@unique([user_id, course_id])
+  @@map("certificates")
+}
+
+// ───────────────────────── 소통 ─────────────────────────
+
+model Question {
+  id          String    @id @default(cuid())
+  lecture_id  String
+  lecture     Lecture   @relation(fields: [lecture_id], references: [id], onDelete: Cascade)
+  course_id   String
+  course      Course    @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id])
+  title       String
+  body        String
+  answered_at DateTime?
+  answers     Answer[]
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([course_id, answered_at])
+  @@index([user_id])
+  @@index([updated_at])
+  @@map("questions")
+}
+
+model Answer {
+  id          String   @id @default(cuid())
+  question_id String
+  question    Question @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  author_kind String // instructor, staff
+  author_id   String
+  body        String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([question_id])
+  @@map("answers")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  course_id  String
+  course     Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  rating     Int // 1..5
+  body       String
+  hidden     Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, course_id])
+  @@index([course_id])
+  @@map("reviews")
+}
+
+model Inquiry {
+  id          String    @id @default(cuid())
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id])
+  category    String // payment, refund, player, subscription, live, etc
+  title       String
+  body        String
+  answer      String?
+  answered_by String? // staff:<id>, api:<키 이름>
+  answered_at DateTime?
+  status      String    @default("open") // open, answered
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([status])
+  @@index([user_id])
+  @@index([updated_at])
+  @@map("inquiries")
+}
+
+model Notice {
+  id         String   @id @default(cuid())
+  title      String
+  body       String
+  pinned     Boolean  @default(false)
+  published  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("notices")
+}
+
+model Faq {
+  id         String   @id @default(cuid())
+  category   String // refund, subscription, device, certificate, live, etc
+  question   String
+  answer     String
+  sort       Int      @default(0)
+  published  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("faqs")
+}
+
+/// 보낸 편지함 (실제 문자·메일은 보내지 않는다).
+model Message {
+  id         String   @id @default(cuid())
+  user_id    String?
+  user       User?    @relation(fields: [user_id], references: [id])
+  channel    String // email, sms
+  to         String
+  kind       String
+  subject    String
+  body       String
+  created_at DateTime @default(now())
+
+  @@index([user_id, kind])
+  @@index([created_at])
+  @@map("messages")
+}
+
+// ───────────────────────── 라이브 ─────────────────────────
+
+model LiveSession {
+  id                String     @id @default(cuid())
+  course_id         String?
+  course            Course?    @relation(fields: [course_id], references: [id])
+  instructor_id     String
+  instructor        Instructor @relation(fields: [instructor_id], references: [id])
+  title             String
+  description       String     @default("")
+  starts_at         DateTime
+  ends_at           DateTime
+  capacity          Int        @default(300)
+  status            String     @default("scheduled") // scheduled, live, ended, cancelled
+  replay_lecture_id String?
+  replay_lecture    Lecture?   @relation(fields: [replay_lecture_id], references: [id])
+  seats             LiveSeat[]
+  chats             LiveChat[]
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+
+  @@index([starts_at])
+  @@index([status, starts_at])
+  @@map("live_sessions")
+}
+
+model LiveSeat {
+  id          String      @id @default(cuid())
+  session_id  String
+  session     LiveSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  user_id     String
+  user        User        @relation(fields: [user_id], references: [id])
+  reserved_at DateTime    @default(now())
+  entered_at  DateTime?
+  created_at  DateTime    @default(now())
+
+  @@unique([session_id, user_id])
+  @@map("live_seats")
+}
+
+model LiveChat {
+  id         Int         @id @default(autoincrement()) // chatSince(afterId) 커서용으로 순서가 있는 정수
+  session_id String
+  session    LiveSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User        @relation(fields: [user_id], references: [id])
+  body       String
+  created_at DateTime    @default(now())
+
+  @@index([session_id, id])
+  @@map("live_chats")
+}
+
+// ───────────────────────── 환불·정산 ─────────────────────────
+
+model Refund {
+  id            String               @id @default(cuid())
+  user_id       String
+  user          User                 @relation(fields: [user_id], references: [id])
+  order_item_id String?
+  order_item    OrderItem?           @relation(fields: [order_item_id], references: [id])
+  invoice_id    String?
+  invoice       SubscriptionInvoice? @relation(fields: [invoice_id], references: [id])
+  reason        String
+  basis         Json // 계산 근거 (경과일·진도·수강분 금액)
+  calc_amount   Int // 규칙으로 계산한 환불액
+  amount        Int // 실제 환불액 (직원 조정 가능)
+  adjust_reason String?
+  status        String               @default("requested") // requested, approved, rejected, done
+  decided_by    String?
+  approved_at   DateTime?
+  done_at       DateTime?
+  reject_reason String?
+  created_at    DateTime             @default(now())
+  updated_at    DateTime             @updatedAt
+
+  // 부분 unique (order_item_id)·(invoice_id) WHERE status IN ('requested','approved') 는 마이그레이션 SQL에 있다.
+  @@index([order_item_id])
+  @@index([invoice_id])
+  @@index([status])
+  @@index([updated_at])
+  @@map("refunds")
+}
+
+model Settlement {
+  id                 String           @id @default(cuid())
+  instructor_id      String
+  instructor         Instructor       @relation(fields: [instructor_id], references: [id])
+  month              String // KST YYYY-MM
+  sales_amount       Int              @default(0)
+  sales_share        Int              @default(0)
+  referral_amount    Int              @default(0)
+  referral_share     Int              @default(0)
+  subscription_share Int              @default(0)
+  refund_deduction   Int              @default(0)
+  carried_in         Int              @default(0)
+  total              Int              @default(0)
+  payout             Int              @default(0)
+  status             String           @default("draft") // draft, confirmed
+  confirmed_by       String?
+  confirmed_at       DateTime?
+  pay_date           String // KST YYYY-MM-DD (다음 달 10일)
+  lines              SettlementLine[]
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+
+  @@unique([instructor_id, month])
+  @@index([month])
+  @@map("settlements")
+}
+
+model SettlementLine {
+  id            String     @id @default(cuid())
+  settlement_id String
+  settlement    Settlement @relation(fields: [settlement_id], references: [id], onDelete: Cascade)
+  kind          String // sale, referral, subscription, refund, carry
+  ref           String
+  base_amount   Int
+  rate          Float
+  amount        Int
+  created_at    DateTime   @default(now())
+
+  @@index([settlement_id])
+  @@map("settlement_lines")
+}
+
+// ───────────────────────── 운영 ─────────────────────────
+
+model QueueSetting {
+  target        String    @id // site, checkout:<campaign>, live:<id>
+  enabled       Boolean   @default(false)
+  rate_per_sec  Int
+  admit_ttl_sec Int       @default(600)
+  last_admit_at DateTime?
+  next_seq      Int       @default(1)
+  course_codes  String[]
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  @@map("queue_settings")
+}
+
+model QueueTicket {
+  id           String    @id @default(cuid())
+  target       String
+  seq          Int
+  status       String    @default("waiting") // waiting, admitted, expired
+  issued_at    DateTime  @default(now())
+  last_seen_at DateTime  @default(now())
+  admitted_at  DateTime?
+  expires_at   DateTime?
+  created_at   DateTime  @default(now())
+
+  @@unique([target, seq])
+  @@index([target, status, seq])
+  @@map("queue_tickets")
+}
+
+/// 서비스 모드 변경 기록. 현재 값은 최신 행.
+model ServiceMode {
+  id         String   @id @default(cuid())
+  mode       String // normal, degraded, read_only, maintenance
+  changed_by String
+  reason     String
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+  @@map("service_modes")
+}
+
+model FaultSwitch {
+  key        String   @id
+  enabled    Boolean  @default(false)
+  value      Json     @default("{}")
+  updated_by String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("fault_switches")
+}
+
+model Incident {
+  id          String    @id @default(cuid())
+  title       String
+  body        String
+  components  String[]
+  severity    String // degraded, outage
+  status      String    @default("investigating") // investigating, identified, monitoring, resolved
+  started_at  DateTime  @default(now())
+  resolved_at DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([status])
+  @@index([updated_at])
+  @@map("incidents")
+}
+
+// ───────────────────────── 관리 ─────────────────────────
+
+model Staff {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password_hash String
+  name          String
+  role          String // admin, cs, content
+  active        Boolean        @default(true)
+  sessions      StaffSession[]
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+
+  @@map("staff")
+}
+
+model StaffSession {
+  token_hash String   @id
+  staff_id   String
+  staff      Staff    @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([staff_id])
+  @@map("staff_sessions")
+}
+
+model ApiKey {
+  id           String    @id @default(cuid())
+  name         String
+  prefix       String // sok_ 다음 몇 글자 (화면 표시용)
+  key_hash     String    @unique
+  scopes       String[] // read, read_pii, write, metrics
+  last_used_at DateTime?
+  revoked_at   DateTime?
+  created_by   String?
+  created_at   DateTime  @default(now())
+
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actor      String // staff:<id>, instructor:<id>, api:<키 이름>, system
+  action     String
+  target     String
+  detail     Json?
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+model JobRun {
+  id         String   @id @default(cuid())
+  name       String
+  started_at DateTime @default(now())
+  ms         Int
+  ok         Boolean
+  detail     Json?
+  created_at DateTime @default(now())
+
+  @@index([name, started_at])
+  @@map("job_runs")
+}
+
+model WebhookEndpoint {
+  id         String            @id @default(cuid())
+  url        String
+  secret     String
+  events     String[]
+  active     Boolean           @default(true)
+  deliveries WebhookDelivery[]
+  created_at DateTime          @default(now())
+  updated_at DateTime          @updatedAt
+
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id              String          @id @default(cuid())
+  endpoint_id     String
+  endpoint        WebhookEndpoint @relation(fields: [endpoint_id], references: [id], onDelete: Cascade)
+  event_id        String
+  type            String
+  payload         Json
+  status          String          @default("pending") // pending, done, failed
+  attempts        Int             @default(0)
+  next_attempt_at DateTime        @default(now())
+  last_status     Int?
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+
+  @@unique([endpoint_id, event_id])
+  @@index([status, next_attempt_at])
+  @@map("webhook_deliveries")
+}
+
+/// 일련번호 (주문·강의·수료증). nextCode 가 원자적으로 늘린다.
+model Counter {
+  key  String @id
+  last Int    @default(0)
+
+  @@map("counters")
+}
