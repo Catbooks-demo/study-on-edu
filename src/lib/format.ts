@@ -94,3 +94,6 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
 
 /** 구독 청구 상태 표기. */
 export const INVOICE_STATUS_LABEL: Record<string, string> = { pending: "결제 대기", paid: "결제 완료", failed: "결제 실패", refunded: "환불 완료" };
+
+/** 강의 상태 표기. */
+export const COURSE_STATUS_LABEL: Record<string, string> = { draft: "작성 중", in_review: "심사 중", published: "공개", rejected: "반려", hidden: "숨김" };

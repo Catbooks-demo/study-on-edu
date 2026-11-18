@@ -81,21 +81,41 @@ export async function signup(input: z.infer<typeof signupSchema>): Promise<User>
 
 const wrong = () => new HttpError(401, "WRONG_LOGIN", "이메일 또는 비밀번호가 맞지 않아요.");
 
+/**
+ * 계정이 없을 때도 같은 시간이 걸리도록 비교할 가짜 해시 (처음 한 번 만든다).
+ * 없으면 바로 401이 나가서 응답 시간으로 가입 여부를 알아낼 수 있다.
+ */
+let dummy: Promise<string> | null = null;
+const dummyHash = () => (dummy ??= hashPassword("studyon-dummy-password-for-timing"));
+
+/** 저장된 해시가 없으면 가짜 해시와 비교하고 false. 있으면 그대로 비교. */
+async function checkPassword(password: string, stored: string | null | undefined): Promise<boolean> {
+  if (!stored) {
+    await verifyPassword(password, await dummyHash());
+    return false;
+  }
+  return verifyPassword(password, stored);
+}
+
 export async function login(email: string, password: string): Promise<User> {
   const u = await db.user.findUnique({ where: { email } });
-  if (!u || !(await verifyPassword(password, u.password_hash))) throw wrong();
+  const ok = await checkPassword(password, u?.password_hash);
+  if (!u || !ok) throw wrong();
   return u;
 }
 
 export async function staffLogin(email: string, password: string): Promise<Staff> {
   const s = await db.staff.findUnique({ where: { email } });
-  if (!s || !s.active || !(await verifyPassword(password, s.password_hash))) throw wrong();
+  // 꺼진 계정도 비밀번호를 비교한 뒤 거절한다(틀린 비밀번호와 같은 시간)
+  const ok = await checkPassword(password, s?.password_hash);
+  if (!s || !s.active || !ok) throw wrong();
   return s;
 }
 
 export async function instructorLogin(email: string, password: string): Promise<InstructorAuth> {
   const u = await db.instructorUser.findUnique({ where: { email }, include: { instructor: true } });
-  if (!u || !(await verifyPassword(password, u.password_hash))) throw wrong();
+  const ok = await checkPassword(password, u?.password_hash);
+  if (!u || !ok) throw wrong();
   const { instructor, ...user } = u;
   if (instructor.status !== "active") {
     throw new HttpError(403, "INSTRUCTOR_SUSPENDED", "활동이 멈춘 강사 계정이에요. 운영팀에 문의해 주세요.");

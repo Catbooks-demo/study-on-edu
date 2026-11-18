@@ -22,4 +22,4 @@ export function startScheduler(): void {
 }
 
 export { withJobLock } from "./lock";
-export { JOBS, expireOrders, retryRefunds, runJobsOnce } from "./tasks";
+export { JOBS, expireOrders, purgeExpiredSessions, retryRefunds, runJobsOnce } from "./tasks";
