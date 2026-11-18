@@ -47,14 +47,14 @@ const brief = (i: Incident): IncidentBrief => ({
 
 /**
  * 구성요소별 상태: 열린(해결 전) 장애 공지 중 가장 나쁜 severity를 쓴다.
- * DB에 닿지 않으면 모두 outage로 본다.
+ * DB에 닿지 않으면 모두 outage로 본다. (client는 시험에서 DB 장애를 흉내 낼 때만 바꾼다)
  */
-export async function componentStatus(now: Date): Promise<ComponentRow[]> {
+export async function componentStatus(now: Date, client: Pick<typeof db, "$queryRaw" | "incident"> = db): Promise<ComponentRow[]> {
   void now;
   let open: Incident[];
   try {
-    await db.$queryRaw`SELECT 1`;
-    open = await db.incident.findMany({ where: { status: { not: "resolved" } }, orderBy: { started_at: "asc" } });
+    await client.$queryRaw`SELECT 1`;
+    open = await client.incident.findMany({ where: { status: { not: "resolved" } }, orderBy: { started_at: "asc" } });
   } catch (e) {
     log.error("상태 페이지: DB 연결 실패", { error: e instanceof Error ? e.message : String(e) });
     return COMPONENTS.map((component) => ({ component, status: "outage" as const }));

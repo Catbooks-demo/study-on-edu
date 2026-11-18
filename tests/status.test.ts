@@ -45,9 +45,10 @@ describe("상태 페이지", () => {
   });
 
   it("db down → every component outage", async () => {
-    vi.spyOn(db, "$queryRaw").mockRejectedValueOnce(new Error("down"));
+    // db.$queryRaw를 spy로 바꾸면 restoreAllMocks 뒤 Prisma 메서드가 사라지므로 가짜 클라이언트를 넘긴다
+    const down = { $queryRaw: () => Promise.reject(new Error("down")), incident: db.incident } as unknown as typeof db;
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const rows = await componentStatus(new Date());
+    const rows = await componentStatus(new Date(), down);
     expect(rows.every((r) => r.status === "outage")).toBe(true);
   });
 
