@@ -18,7 +18,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "synth": "tsx scripts/gen-synthetic.ts",
     "synth:daily": "tsx scripts/gen-synthetic-daily.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "apikey": "tsx scripts/issue-api-key.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
