@@ -31,7 +31,10 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             <Link href="/subscribe" className="hidden rounded-md px-2.5 py-1.5 font-semibold text-brand-700 hover:bg-brand-50 sm:inline">구독</Link>
             <Link href="/support" className="hidden rounded-md px-2.5 py-1.5 hover:bg-slate-100 lg:inline">고객센터</Link>
             {user ? (
-              <span className="rounded-md px-2.5 py-1.5 font-medium text-brand-700">{user.name}님</span>
+              <>
+                <Link href="/cart" className="rounded-md px-2.5 py-1.5 hover:bg-slate-100">장바구니</Link>
+                <Link href="/my" className="rounded-md px-2.5 py-1.5 font-medium text-brand-700 hover:bg-brand-50">{user.name}님</Link>
+              </>
             ) : (
               <>
                 <Link href="/login" className="rounded-md px-2.5 py-1.5 hover:bg-slate-100">로그인</Link>

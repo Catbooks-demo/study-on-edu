@@ -59,3 +59,26 @@ export function accessLabel(days: number | null): string {
 export function discountPct(list: number, unit: number): number {
   return list > 0 ? Math.floor(((list - unit) * 100) / list) : 0;
 }
+
+/** 주문 상태 표기. */
+export const ORDER_STATUS_LABEL: Record<string, string> = {
+  pending: "결제 대기",
+  paid: "결제 완료",
+  cancelled: "취소",
+  partially_refunded: "부분 환불",
+  refunded: "환불 완료",
+};
+
+/** 환불 상태 표기. */
+export const REFUND_STATUS_LABEL: Record<string, string> = {
+  requested: "환불 신청됨",
+  approved: "환불 처리 중",
+  rejected: "환불 거절",
+  done: "환불 완료",
+};
+
+/** 수강권 출처 표기. */
+export const ENROLLMENT_SOURCE_LABEL: Record<string, string> = { order: "구매", bundle: "패키지", subscription: "구독", free: "무료" };
+
+/** 비율 → "3.0%" */
+export const pct1 = (r: number) => `${(r * 100).toFixed(1)}%`;
