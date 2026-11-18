@@ -1,0 +1,11 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 금액은 모두 정수 원. 시각은 UTC로 저장하고 화면·날짜 계산은 한국 시간.
+// 표·컬럼 이름은 영어 snake_case.
