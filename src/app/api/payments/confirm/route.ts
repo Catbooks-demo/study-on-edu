@@ -26,4 +26,4 @@ export const POST = route(async (req) => {
     order: r.order ? { code: r.order.code, status: r.order.status } : null,
     invoice: r.invoice ? { id: r.invoice.id, status: r.invoice.status } : null,
   });
-});
+}, { feature: "write" });

@@ -12,4 +12,4 @@ export const POST = route(async (req) => {
   const res = NextResponse.json(publicInstructor(auth));
   res.cookies.set(INSTRUCTOR_COOKIE, token, cookieOptions(INSTRUCTOR_SESSION_HOURS * 3600, req));
   return res;
-});
+}, { feature: "auth" });

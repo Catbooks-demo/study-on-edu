@@ -17,4 +17,4 @@ export const POST = route(async (req) => {
   const order = await getOrderForUser(user.id, code);
   const paid = await mockPay(order.code);
   return NextResponse.json({ order: { code: paid.code, status: paid.status } });
-});
+}, { feature: "write" });

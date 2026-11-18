@@ -1,14 +1,33 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Logo } from "@/components/Logo";
-import { currentUser } from "@/server/auth/current";
+import { MaintenanceNotice } from "@/components/MaintenanceNotice";
+import { ModeBanner } from "@/components/ModeBanner";
+import { currentStaff, currentUser } from "@/server/auth/current";
 import { listCategories } from "@/server/catalog";
+import { currentMode } from "@/server/servicemode";
+import { listIncidents } from "@/server/status";
+
+/** 점검 중에도 열리는 경로 (proxy.ts가 x-so-path로 넘긴다). */
+const ALWAYS_OPEN = ["/status", "/maintenance"];
+const pathOnly = (p: string | null) => (p ? p.split("?")[0] : null);
+const isOpen = (p: string | null, list: string[]) => !!p && list.some((x) => p === x || p.startsWith(`${x}/`));
 
 export const dynamic = "force-dynamic";
 
 /** 수강생 화면 공통 틀: 헤더(검색·메뉴·분야), 배너 자리, 푸터. */
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [user, categories] = await Promise.all([currentUser(), listCategories()]);
+  const path = pathOnly((await headers()).get("x-so-path"));
+  const [user, categories, mode, open] = await Promise.all([
+    currentUser(),
+    listCategories(),
+    currentMode(),
+    listIncidents(new Date())
+      .then((l) => l.filter((i) => i.status !== "resolved"))
+      .catch(() => []),
+  ]);
+  const closed = mode.mode === "maintenance" && !isOpen(path, ALWAYS_OPEN) && !(await currentStaff());
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -56,8 +75,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           </ul>
         </nav>
       </header>
-      {/* 서비스 모드·장애 공지 배너 자리 (Task 20–21) */}
-      <main className="flex-1">{children}</main>
+      <ModeBanner mode={mode.mode} incidents={open.map((i) => ({ id: i.id, title: i.title, severity: i.severity }))} />
+      <main className="flex-1">{closed ? <MaintenanceNotice reason={mode.reason} /> : children}</main>
       <Footer />
     </div>
   );

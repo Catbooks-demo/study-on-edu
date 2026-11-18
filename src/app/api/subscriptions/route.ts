@@ -19,7 +19,7 @@ export const GET = route(async (req) => {
   const user = await requireUser(req);
   const s = await currentSubscription(user.id);
   return NextResponse.json({ subscription: s ? { ...subscriptionView(s), invoices: s.invoices.map(invoiceView) } : null });
-});
+}, { feature: "browse" });
 
 /**
  * 구독 신청. 토스 키가 있으면 결제창 정보(pay)를 돌려주고, 없으면 모의 정기 결제로 바로 낸다(끝 4000 카드는 402).
@@ -42,4 +42,4 @@ export const POST = route(async (req) => {
     },
     { status: 201 },
   );
-});
+}, { feature: "write" });

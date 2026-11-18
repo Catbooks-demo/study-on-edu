@@ -12,4 +12,4 @@ export const GET = route<Ctx>(async (req, { params }) => {
   const user = await requireUser(req);
   const { code } = await params;
   return NextResponse.json({ order: orderView(await getOrderForUser(user.id, code)) });
-});
+}, { feature: "browse" });

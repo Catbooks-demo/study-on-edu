@@ -7,4 +7,4 @@ export const POST = route(async (req) => {
   const res = NextResponse.json({ ok: true });
   res.cookies.set(INSTRUCTOR_COOKIE, "", cookieOptions(0, req));
   return res;
-});
+}, { feature: "auth" });

@@ -19,7 +19,7 @@ export const GET = route<Ctx>(async (req, { params }) => {
   const n = after ? Number(after) : null;
   const chats = await chatSince(id, n !== null && Number.isInteger(n) && n >= 0 ? n : null);
   return NextResponse.json({ chats: await chatView(chats) });
-});
+}, { feature: "browse" });
 
 /** 채팅 쓰기 (입장한 사람만, 200자, 계정당 30회/분). */
 export const POST = route<Ctx>(async (req, { params }) => {
@@ -28,4 +28,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const { body: text } = await readJson(req, body);
   const c = await postChat(user.id, id, text);
   return NextResponse.json({ chat: (await chatView([c]))[0] }, { status: 201 });
-});
+}, { feature: "write" });

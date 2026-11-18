@@ -12,4 +12,4 @@ export const POST = route(async (req) => {
   const res = NextResponse.json({ user: publicUser(user) }, { status: 201 });
   res.cookies.set(USER_COOKIE, token, cookieOptions(USER_SESSION_DAYS * 86_400, req));
   return res;
-});
+}, { feature: "write" });

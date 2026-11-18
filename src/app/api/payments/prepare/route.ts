@@ -19,4 +19,4 @@ export const POST = route(async (req) => {
   if (!tossEnabled()) throw new HttpError(400, "TOSS_DISABLED", "토스 테스트 결제가 꺼져 있어요. 모의 결제를 써 주세요.");
   const p = await preparePayment(order.code, "toss");
   return NextResponse.json({ ...p, clientKey: getEnv().TOSS_CLIENT_KEY, customerName: user.name, customerEmail: user.email });
-});
+}, { feature: "write" });

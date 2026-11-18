@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { log } from "./log";
+import type { Feature } from "@/rules/servicemode";
 import { recordRequest, routeGroup } from "./metrics";
+import { blockedBy, modeError } from "./servicemode";
 
 /** 수강생·강사·직원에게 보여 줄 수 있는 오류. 본문은 `{error:{code,message}}`. */
 export class HttpError extends Error {
@@ -42,6 +44,22 @@ type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 export interface RouteOptions {
   /** 지표·로그의 경로 묶음. 없으면 요청 경로에서 routeGroup으로 만든다. */
   group?: string;
+  /** 서비스 모드 기능 분류. 주면 그 모드에서 막힌 기능일 때 503 SERVICE_MODE (직원 쿠키가 있으면 통과). */
+  feature?: Feature;
+}
+
+const STAFF_COOKIE_NAME = "so_staff";
+
+/** 모드가 이 기능을 막으면 직원인지 확인하고, 아니면 503. */
+async function guardFeature(req: Request, feature: Feature): Promise<void> {
+  const mode = await blockedBy(feature);
+  if (!mode) return;
+  const token = readCookie(req, STAFF_COOKIE_NAME);
+  if (token) {
+    const { staffFromToken } = await import("./auth/session");
+    if (await staffFromToken(token)) return;
+  }
+  throw modeError(mode);
 }
 
 const REQ_ID_RE = /^[A-Za-z0-9._-]{1,64}$/;
@@ -76,6 +94,7 @@ export function route<C = unknown>(fn: Handler<C>, opts: RouteOptions = {}): Han
     const group = opts.group ?? routeGroup(new URL(req.url).pathname);
     let res: Response;
     try {
+      if (opts.feature) await guardFeature(req, opts.feature);
       res = await fn(req, ctx);
     } catch (e) {
       res = errorResponse(e, reqId);

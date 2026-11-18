@@ -12,4 +12,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const user = await requireUser(req);
   const { id } = await params;
   return NextResponse.json(await enterLive(user.id, id));
-});
+}, { feature: "play" });

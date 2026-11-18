@@ -16,4 +16,4 @@ export const POST = route(async (req) => {
   const { coupon_code } = await readJson(req, body);
   const order = await createOrder(user.id, { coupon_code: coupon_code || null });
   return NextResponse.json({ order: { code: order.code, payable: order.payable, expires_at: order.expires_at.toISOString() } }, { status: 201 });
-});
+}, { feature: "write" });

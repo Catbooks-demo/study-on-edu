@@ -19,4 +19,4 @@ export const POST = route(async (req) => {
   const { order_item_id, reason } = await readJson(req, body);
   const r = await requestRefund(user.id, order_item_id, reason);
   return NextResponse.json({ refund: refundView(r) }, { status: 201 });
-});
+}, { feature: "write" });

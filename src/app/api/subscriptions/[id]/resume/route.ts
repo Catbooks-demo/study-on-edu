@@ -13,4 +13,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const { id } = await params;
   const s = await resume(user.id, id);
   return NextResponse.json({ subscription: subscriptionView(s) });
-});
+}, { feature: "write" });
