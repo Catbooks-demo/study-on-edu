@@ -4,6 +4,7 @@ import { log } from "../log";
 import { cancelPendingOrder, lockOrder } from "../orders";
 import { reconcilePending } from "../payments";
 import { settleRefund, stuckRefundIds } from "../refunds";
+import { monthlySettlement } from "../settlements";
 import { endSubscriptions, renewSubscriptions, resumePaused, retryFailedInvoices } from "../subscriptions";
 import { withJobLock } from "./lock";
 
@@ -53,6 +54,8 @@ export const JOBS: Record<string, (now: Date) => Promise<number>> = {
   renewSubscriptions,
   retryFailedInvoices,
   advanceLiveStatus,
+  // 정산: 달이 바뀐 뒤 첫 작업에서 전월분 (KST)
+  monthlySettlement,
 };
 
 /**
