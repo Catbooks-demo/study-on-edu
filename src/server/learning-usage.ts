@@ -3,7 +3,7 @@ import { db } from "./db";
 
 /**
  * 환불 계산용 강별 사용량 (강의 여러 개면 모든 강을 합친다: 패키지).
- * 진도 행이 없으면 0초. 진도는 Task 11(하트비트)이 채운다.
+ * 진도 행이 없으면 0초. watched_sec는 하트비트(player.heartbeat)가, downloaded_at은 자료 받기(markDownloaded)가 채운다.
  */
 export async function usageFor(userId: string, courseIds: string[]): Promise<LectureUse[]> {
   if (!courseIds.length) return [];

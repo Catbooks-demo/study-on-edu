@@ -209,14 +209,23 @@ export interface CourseDetail extends CourseSummary {
 }
 
 /** 후기 작성자 이름 가리기: 앞 한두 글자와 끝 글자만 보인다 ("새벽공부러" → "새벽**러"). */
-function maskName(name: string): string {
+export function maskName(name: string): string {
   const s = [...name];
   if (s.length <= 2) return `${s[0]}*`;
   return `${s.slice(0, Math.min(2, s.length - 2)).join("")}${"*".repeat(Math.max(1, s.length - 3))}${s[s.length - 1]}`;
 }
 
 /** 강의 상세. 공개 강의가 아니면 null(미리보기는 강사·직원 화면에서만). */
-export async function getCourse(code: string, now = new Date()): Promise<CourseDetail | null> {
+export const REVIEW_SORTS = { latest: "최신순", high: "별점 높은순", low: "별점 낮은순" } as const;
+export type ReviewSort = keyof typeof REVIEW_SORTS;
+
+const REVIEW_ORDER: Record<ReviewSort, Prisma.ReviewOrderByWithRelationInput[]> = {
+  latest: [{ created_at: "desc" }],
+  high: [{ rating: "desc" }, { created_at: "desc" }],
+  low: [{ rating: "asc" }, { created_at: "desc" }],
+};
+
+export async function getCourse(code: string, now = new Date(), opts: { reviewSort?: ReviewSort } = {}): Promise<CourseDetail | null> {
   const c = await db.course.findUnique({
     where: { code },
     include: {
@@ -236,7 +245,7 @@ export async function getCourse(code: string, now = new Date()): Promise<CourseD
     db.review.groupBy({ by: ["rating"], where: { course_id: c.id, hidden: false }, _count: { _all: true } }),
     db.review.findMany({
       where: { course_id: c.id, hidden: false },
-      orderBy: { created_at: "desc" },
+      orderBy: REVIEW_ORDER[opts.reviewSort ?? "latest"],
       take: 10,
       include: { user: { select: { name: true } } },
     }),

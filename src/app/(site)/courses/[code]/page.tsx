@@ -10,11 +10,14 @@ import { RatingBars } from "@/components/RatingBars";
 import { Stars } from "@/components/Stars";
 import { clipFromLecture } from "@/lib/fakevideo/clips";
 import { LEVEL_LABEL, accessLabel, durationKo, won } from "@/lib/format";
-import { getCourse } from "@/server/catalog";
+import { ReviewForm } from "@/components/ReviewForm";
+import { REVIEW_SORTS, type ReviewSort, getCourse } from "@/server/catalog";
+import { currentUser } from "@/server/auth/current";
+import { reviewEligibility } from "@/server/reviews";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ code: string }> };
+type Props = { params: Promise<{ code: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = await getCourse((await params).code);
@@ -30,9 +33,14 @@ const TABS = [
   ["refund", "환불 규정"],
 ] as const;
 
-export default async function CoursePage({ params }: Props) {
-  const c = await getCourse((await params).code);
+export default async function CoursePage({ params, searchParams }: Props) {
+  const sp = (await searchParams) ?? {};
+  const sortParam = typeof sp.reviews === "string" ? sp.reviews : "latest";
+  const reviewSort: ReviewSort = sortParam in REVIEW_SORTS ? (sortParam as ReviewSort) : "latest";
+  const c = await getCourse((await params).code, new Date(), { reviewSort });
   if (!c) notFound();
+  const user = await currentUser();
+  const elig = user ? await reviewEligibility(user.id, c.code) : null;
   const clip = clipFromLecture({
     code: c.code,
     category: c.category.code,
@@ -135,6 +143,16 @@ export default async function CoursePage({ params }: Props) {
             <div className="mt-3 rounded-2xl bg-white p-5 ring-1 ring-slate-200">
               <RatingBars avg={c.rating_avg} dist={c.rating_dist} />
             </div>
+            <nav aria-label="수강평 정렬" className="mt-4 flex gap-3 text-sm">
+              {(Object.keys(REVIEW_SORTS) as ReviewSort[]).map((k) => (
+                <Link key={k} href={`?reviews=${k}#reviews`} scroll={false} aria-current={k === reviewSort ? "true" : undefined} className={k === reviewSort ? "font-bold text-brand-700" : "text-slate-500 hover:text-brand-700"}>{REVIEW_SORTS[k]}</Link>
+              ))}
+            </nav>
+            {elig?.enrolled && !elig.written && (elig.ratio >= 0.4 ? (
+              <ReviewForm courseCode={c.code} />
+            ) : (
+              <p className="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">진도율 40%부터 수강평을 쓸 수 있어요. 지금 진도율은 {Math.floor(elig.ratio * 100)}%예요.</p>
+            ))}
             {c.reviews.length ? (
               <ul className="mt-4 space-y-3">
                 {c.reviews.map((r, i) => (

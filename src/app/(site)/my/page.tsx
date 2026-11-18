@@ -3,28 +3,30 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CourseThumb } from "@/components/CourseThumb";
 import { LogoutButton } from "@/components/AuthForms";
-import { ENROLLMENT_SOURCE_LABEL, ORDER_STATUS_LABEL, won } from "@/lib/format";
-import { kstDate } from "@/rules/time";
+import { ORDER_STATUS_LABEL, won } from "@/lib/format";
 import { currentUser } from "@/server/auth/current";
-import { db } from "@/server/db";
+import { myClassroom } from "@/server/classroom";
 import { listOrdersForUser } from "@/server/orders";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "마이페이지" };
 
-/** 마이페이지: 내 강의실(수강 중인 강의)과 최근 주문. 진도·이어보기는 플레이어 작업(Task 12)이 더한다. */
+const MENU = [
+  ["/my/classroom", "내 강의실"],
+  ["/my/orders", "주문·환불"],
+  ["/my/notes", "노트"],
+  ["/my/questions", "내 질문"],
+  ["/my/inquiries", "1:1 문의"],
+  ["/my/devices", "기기 관리"],
+  ["/my/profile", "회원 정보"],
+] as const;
+
+/** 마이페이지: 이어서 볼 강의(진도·이어보기), 최근 주문, 메뉴. */
 export default async function MyPage() {
   const user = await currentUser();
   if (!user) redirect("/login?next=/my");
-  const now = new Date();
-  const [enrollments, orders] = await Promise.all([
-    db.enrollment.findMany({
-      where: { user_id: user.id, status: "active", OR: [{ expires_at: null }, { expires_at: { gt: now } }] },
-      include: { course: { include: { category: true, instructor: true } } },
-      orderBy: { updated_at: "desc" },
-    }),
-    listOrdersForUser(user.id, 5),
-  ]);
+  const [room, orders] = await Promise.all([myClassroom(user.id), listOrdersForUser(user.id, 5)]);
+  const cards = [...room.active, ...room.completed];
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="flex items-end justify-between gap-4">
@@ -37,29 +39,40 @@ export default async function MyPage() {
           <LogoutButton />
         </div>
       </div>
+      <nav aria-label="마이페이지 메뉴" className="mt-6 flex flex-wrap gap-2 text-sm">
+        {MENU.map(([href, label]) => (
+          <Link key={href} href={href} className="rounded-full bg-white px-3 py-1.5 font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-brand-700">{label}</Link>
+        ))}
+      </nav>
 
       <section className="mt-8" aria-labelledby="classroom">
-        <h2 id="classroom" className="text-xl font-bold">내 강의실</h2>
-        {enrollments.length === 0 ? (
+        <div className="flex items-center justify-between">
+          <h2 id="classroom" className="text-xl font-bold">내 강의실</h2>
+          <Link href="/my/classroom" className="text-sm font-semibold text-brand-600 hover:underline">전체 보기</Link>
+        </div>
+        {cards.length === 0 ? (
           <div className="mt-3 rounded-2xl bg-white p-8 text-center text-sm text-slate-600 ring-1 ring-slate-200">
             아직 수강 중인 강의가 없어요. <Link href="/courses" className="font-semibold text-brand-600 underline">강의 둘러보기</Link>
           </div>
         ) : (
           <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {enrollments.map((e) => (
-              <li key={e.id} data-testid="classroom-course" className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
-                <Link href={`/courses/${e.course.code}`} className="block">
-                  <CourseThumb code={e.course.code} category={e.course.category.code} title={e.course.title} className="aspect-video w-full" />
-                  <div className="p-4">
-                    <p className="text-xs font-semibold text-brand-600">{e.course.instructor.display_name}</p>
-                    <p className="mt-0.5 line-clamp-2 font-semibold">{e.course.title}</p>
-                    <p className="mt-2 text-xs text-slate-500">
-                      {ENROLLMENT_SOURCE_LABEL[e.source] ?? e.source} · {e.expires_at ? `${kstDate(e.expires_at)}까지` : e.source === "subscription" ? "구독 중" : "평생 수강"}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
+            {cards.map((c) => {
+              const target = c.resume?.lecture_id ?? c.first_lecture_id;
+              return (
+                <li key={c.course_code} data-testid="classroom-course" className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+                  <Link href={target ? `/learn/${c.course_code}/${target}` : `/courses/${c.course_code}`} className="block">
+                    <CourseThumb code={c.course_code} category={c.category} title={c.title} className="aspect-video w-full" />
+                    <div className="p-4">
+                      <p className="line-clamp-2 font-semibold">{c.title}</p>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full bg-brand-500" style={{ width: `${Math.floor(c.progress_ratio * 100)}%` }} />
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-500">진도율 {Math.floor(c.progress_ratio * 100)}% · {c.resume ? "이어보기" : "학습 시작"}</p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
