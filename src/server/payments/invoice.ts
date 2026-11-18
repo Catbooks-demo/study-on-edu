@@ -45,5 +45,5 @@ export async function onInvoicePaid(tx: Tx, invoiceId: string, now: Date): Promi
       `구독이 자동으로 갱신됐어요. (결제 ${won(inv.amount)} · 이번 기간 ${until}까지)`,
     );
   }
-  if (sub.status !== "active") onSubscriptionStatus(sub, sub.status, "active");
+  if (sub.status !== "active") await onSubscriptionStatus(tx, sub, sub.status, "active");
 }

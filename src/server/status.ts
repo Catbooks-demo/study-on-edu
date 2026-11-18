@@ -4,6 +4,7 @@ import { audit } from "./audit";
 import { db } from "./db";
 import { HttpError } from "./http";
 import { log } from "./log";
+import { emitEvent } from "./webhooks";
 
 /** 상태 페이지 구성요소 (이 순서로 보여 준다). */
 export const COMPONENTS = ["web", "player", "payments", "live", "api"] as const;
@@ -91,6 +92,7 @@ export async function createIncident(actor: string, input: z.input<typeof incide
       data: { title: v.title, body: v.body, components: [...new Set(v.components)], severity: v.severity, started_at: now },
     });
     await audit(actor, "incident.create", `incident:${inc.id}`, { severity: v.severity, components: inc.components }, tx);
+    await emitEvent(tx, "incident.created", { ...incidentView(inc), actor }, now);
     return inc;
   });
 }
@@ -110,6 +112,7 @@ export async function updateIncident(actor: string, id: string, input: z.input<t
       },
     });
     await audit(actor, "incident.update", `incident:${id}`, { from: cur.status, to: v.status }, tx);
+    await emitEvent(tx, "incident.updated", { ...incidentView(out), from: cur.status, actor }, now);
     return out;
   });
 }
