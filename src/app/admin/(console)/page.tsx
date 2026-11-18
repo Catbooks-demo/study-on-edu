@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { OpsChart } from "@/components/ops/OpsChart";
 import { Card, Empty, Flash, MiniBars, PageTitle, Pill, Stat } from "@/components/admin/ui";
 import { dateKo, dateShort, dateTimeKo, won } from "@/lib/format";
 import { questionOverdue } from "@/rules/deadlines";
 import { kstDate } from "@/rules/time";
 import { dashboardCounts, salesByDay } from "@/server/admin";
 import { db } from "@/server/db";
+import { recentSeries, recentWindow } from "@/server/metrics";
 import { activePlaybacks } from "@/server/player";
 import { can } from "@/server/roles";
 import { type SP, guard } from "./guard";
@@ -16,6 +18,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const st = await guard(null);
   const now = new Date();
   const today = kstDate(now);
+  const recent = recentWindow(new Date());
   const [c, days, playing, refunds, queue, questions, inquiries, pastDue] = await Promise.all([
     dashboardCounts(now),
     salesByDay(now, 14),
@@ -61,8 +64,11 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           </div>
         </Card>
         <Card title="운영 지표">
-          <p className="text-sm text-slate-500">동시 재생·대기열·오류율 그래프 자리예요. 운영 지표가 켜지면 여기에 1분 단위로 그려져요.</p>
-          <p className="mt-3 text-sm">지금 재생 중 <b className="tabular-nums">{playing}명</b></p>
+          <p className="text-sm">
+            지금 재생 중 <b className="tabular-nums">{playing}명</b> · 최근 1분 오류율 <b className="tabular-nums">{(recent.error_rate * 100).toFixed(1)}%</b> · p95{" "}
+            <b className="tabular-nums">{recent.p95_ms}ms</b>
+          </p>
+          <div className="mt-3"><OpsChart series={recentSeries(new Date())} /></div>
         </Card>
       </div>
 

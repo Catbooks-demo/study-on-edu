@@ -1,33 +1,23 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import { NewWebhookForm, WebhookActions } from "@/components/ops/WebhookForms";
 import { dateTimeKo } from "@/lib/format";
-import { currentStaff } from "@/server/auth/current";
 import { db } from "@/server/db";
-import { can } from "@/server/roles";
 import { RETRY_MIN, endpointView, recentDeliveries } from "@/server/webhooks";
+import { guard } from "../guard";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "웹훅" };
 
 /** 웹훅 주소 관리와 최근 배달 (admin만). */
 export default async function WebhooksPage() {
-  const staff = await currentStaff();
-  if (!staff) redirect("/admin/login?next=/admin/webhooks");
-  if (!can(staff.role, "api_keys")) {
-    return <p className="mx-auto max-w-3xl px-4 py-14 font-semibold">웹훅은 관리자만 볼 수 있어요.</p>;
-  }
+  await guard("api_keys");
   const [endpoints, deliveries] = await Promise.all([
     db.webhookEndpoint.findMany({ orderBy: { created_at: "asc" } }).then((l) => l.map(endpointView)),
     recentDeliveries(30),
   ]);
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <p className="text-sm text-slate-500">
-        <Link href="/admin/ops" className="hover:underline">운영</Link> › 웹훅
-      </p>
-      <h1 className="mt-1 text-2xl font-bold">웹훅</h1>
+    <div>
+      <h1 className="text-2xl font-bold">웹훅</h1>
       <p className="mt-1 text-sm text-slate-600">
         이벤트가 생기면 등록한 주소로 POST해요. 헤더 X-StudyOn-Signature = t=&lt;unix초&gt;,v1=HMAC-SHA256(비밀값, &quot;t.본문&quot;).
         실패하면 {RETRY_MIN.join("·")}분 뒤 다시 보내고 6번째 실패면 멈춰요.
