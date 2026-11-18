@@ -16,6 +16,8 @@
     "e2e": "playwright test",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "synth": "tsx scripts/gen-synthetic.ts",
+    "synth:daily": "tsx scripts/gen-synthetic-daily.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
