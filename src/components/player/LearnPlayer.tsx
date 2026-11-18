@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { type LectureScriptLike, clipFromScript } from "@/lib/fakevideo/clips";
 import { FakeVideo } from "./FakeVideo";
 import { NotesPanel } from "./NotesPanel";
+import { QuestionsPanel } from "./QuestionsPanel";
 import { PlayerControls } from "./PlayerControls";
 import { ResourceButton } from "./ResourceButton";
 import { usePlayback } from "./usePlayback";
@@ -19,7 +20,6 @@ export function LearnPlayer(props: {
   resumeSec: number;
   downloaded: boolean;
   initial: { watched_sec: number; done: boolean; course_progress: number };
-  questions?: React.ReactNode;
 }) {
   const { lecture, course, enrolled } = props;
   const script = lecture.script as LectureScriptLike | null;
@@ -109,7 +109,7 @@ export function LearnPlayer(props: {
             {tab === "notes" ? (
               <NotesPanel lectureId={lecture.id} courseId={course.id} position={p.position} onSeek={p.seek} />
             ) : (
-              props.questions ?? <p className="text-sm text-slate-500">질문 기능을 준비하고 있어요.</p>
+              <QuestionsPanel lectureId={lecture.id} />
             )}
           </div>
         </div>

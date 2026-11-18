@@ -10,7 +10,7 @@ export default async function SupportPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <h1 className="text-2xl font-extrabold tracking-tight">고객센터</h1>
-      <p className="mt-1 text-sm text-slate-500">궁금한 점을 먼저 FAQ에서 찾아보세요. 1:1 문의는 곧 열려요.</p>
+      <p className="mt-1 text-sm text-slate-500">궁금한 점을 먼저 FAQ에서 찾아보세요. 해결되지 않으면 <Link href="/support/inquiry" className="font-semibold text-brand-700 underline">1:1 문의</Link>를 남겨 주세요.</p>
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
           <div className="flex items-center justify-between">
