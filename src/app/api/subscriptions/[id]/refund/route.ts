@@ -18,7 +18,7 @@ export const GET = route<Ctx>(async (req, { params }) => {
   const user = await requireUser(req);
   const { id } = await params;
   return NextResponse.json({ quote: await previewSubscriptionRefund(user.id, id) });
-});
+}, { feature: "browse" });
 
 /** 구독 환불 신청. 승인되면 그 기간 결제를 돌려주고 구독은 바로 끝난다. */
 export const POST = route<Ctx>(async (req, { params }) => {
@@ -28,4 +28,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const { reason } = await readJson(req, body);
   const r = await requestSubscriptionRefund(user.id, id, reason);
   return NextResponse.json({ refund: refundView(r) }, { status: 201 });
-});
+}, { feature: "write" });

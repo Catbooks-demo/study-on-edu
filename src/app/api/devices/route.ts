@@ -10,4 +10,4 @@ export const GET = route(async (req) => {
   const user = await requireUser(req);
   const key = readCookie(req, DEVICE_COOKIE);
   return NextResponse.json({ devices: (await listDevices(user.id)).map((d) => deviceView(d, key)) });
-});
+}, { feature: "browse" });

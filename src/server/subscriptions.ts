@@ -86,7 +86,7 @@ export async function endSubscription(tx: Tx, sub: Subscription, to: "cancelled"
   });
   await tx.subscriptionInvoice.updateMany({ where: { subscription_id: sub.id, status: "pending" }, data: { status: "failed" } });
   await expireSubscriptionEnrollments(tx, sub.id);
-  onSubscriptionStatus(sub, sub.status, to);
+  await onSubscriptionStatus(tx, sub, sub.status, to);
 }
 
 // ───────────────────────── 가입 ─────────────────────────
@@ -253,7 +253,7 @@ export async function pause(userId: string, subId: string, days: number, now: Da
       tx, s.user, "subscription_paused", "구독 일시정지",
       `구독을 ${days}일 동안 멈췄어요. ${kstDay(until)}에 다시 시작하고, 멈춘 만큼 이번 기간이 늘어나요. 멈춘 동안에는 구독 강의를 볼 수 없어요.`,
     );
-    onSubscriptionStatus(s, s.status, "paused");
+    await onSubscriptionStatus(tx, s, s.status, "paused");
     return out;
   });
 }
@@ -267,7 +267,7 @@ export async function resume(userId: string, subId: string, now: Date = new Date
       where: { id: s.id },
       data: { status: "active", paused_until: null, current_period_end: resumeEarly(s.current_period_end, s.paused_until, now) },
     });
-    onSubscriptionStatus(s, s.status, "active");
+    await onSubscriptionStatus(tx, s, s.status, "active");
     return out;
   });
 }
@@ -309,7 +309,7 @@ async function recordFailure(subId: string, invoiceId: string, now: Date, reason
       tx, s.user, "subscription_payment_failed", "구독 결제 실패",
       `구독 결제(${won(s.plan.price)})가 되지 않았어요. ${reason ?? ""} ${kstDay(next.next_retry_at)}에 다시 결제할게요. 그동안에도 강의는 들을 수 있어요. 마이페이지 › 구독에서 카드를 바꾸면 바로 다시 결제해요.`.replace(/\s+/g, " "),
     );
-    if (firstTime) onSubscriptionStatus(s, s.status, "past_due");
+    if (firstTime) await onSubscriptionStatus(tx, s, s.status, "past_due");
   });
 }
 
@@ -420,7 +420,7 @@ export async function resumePaused(now: Date): Promise<number> {
       if (!s || s.status !== "paused" || !s.paused_until || s.paused_until > now) return false;
       await tx.subscription.update({ where: { id }, data: { status: "active", paused_until: null } });
       await recordMessage(tx, s.user, "subscription_resumed", "구독 다시 시작", "일시정지가 끝나 구독이 다시 시작됐어요. 이어서 들어 보세요.");
-      onSubscriptionStatus(s, "paused", "active");
+      await onSubscriptionStatus(tx, s, "paused", "active");
       return true;
     });
     if (done) n++;

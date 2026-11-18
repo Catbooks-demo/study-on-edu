@@ -11,4 +11,4 @@ export const GET = route(async (req) => {
   const item = new URL(req.url).searchParams.get("item");
   if (!item || item.length > 40) throw new HttpError(400, "BAD_INPUT", "주문 항목을 골라 주세요.");
   return NextResponse.json({ quote: await previewRefund(user.id, item) });
-});
+}, { feature: "browse" });

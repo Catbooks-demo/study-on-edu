@@ -26,4 +26,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
       "cache-control": "no-store",
     },
   });
-});
+}, { feature: "play" });

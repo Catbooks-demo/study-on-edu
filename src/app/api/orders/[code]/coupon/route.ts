@@ -18,4 +18,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const { coupon_code } = await readJson(req, body);
   await applyOrderCoupon(user.id, code, coupon_code || null);
   return NextResponse.json({ order: orderView(await getOrderForUser(user.id, code)) });
-});
+}, { feature: "write" });

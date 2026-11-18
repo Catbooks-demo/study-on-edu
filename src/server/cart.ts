@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { heldPriceAt } from "@/rules/queue";
 import { type OrderPricing, type PriceLine, effectivePrice, priceOrder } from "@/rules/pricing";
 import { db } from "./db";
 import { ownsCourse } from "./enrollments";
@@ -56,7 +57,11 @@ export async function removeFromCart(userId: string, t: CartTarget): Promise<voi
 }
 
 /** 장바구니 줄과 가격. at은 판매가를 정하는 시각(보통 지금). */
-export async function cartLines(tx: Tx, userId: string, at: Date): Promise<CartLine[]> {
+/**
+ * 장바구니 줄과 가격. heldAt(대기열 순번표 발급 시각)을 주면 강의마다 heldPriceAt 규칙으로
+ * 할인 마감 뒤 30분까지 발급 시각 가격을 쓴다.
+ */
+export async function cartLines(tx: Tx, userId: string, at: Date, heldAt?: Date): Promise<CartLine[]> {
   const items = await tx.cartItem.findMany({
     where: { user_id: userId },
     orderBy: { created_at: "asc" },
@@ -70,7 +75,7 @@ export async function cartLines(tx: Tx, userId: string, at: Date): Promise<CartL
     if (it.course) {
       const c = it.course;
       if (c.status !== "published") continue;
-      const p = effectivePrice(c, at);
+      const p = effectivePrice(c, heldAt ? heldPriceAt(heldAt, at, c.sale_ends_at) : at);
       lines.push({
         key: c.code,
         kind: "course",

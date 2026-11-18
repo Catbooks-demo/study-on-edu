@@ -15,7 +15,7 @@ const target = z.object({
 export const GET = route(async (req) => {
   const user = await requireUser(req);
   return NextResponse.json(await getCart(user.id));
-});
+}, { feature: "browse" });
 
 /** 담기: {course_code} 또는 {bundle_code}. 이미 산 강의는 409. */
 export const POST = route(async (req) => {
@@ -23,7 +23,7 @@ export const POST = route(async (req) => {
   const t = await readJson(req, target);
   const item = await addToCart(user.id, t);
   return NextResponse.json({ item: { id: item.id } }, { status: 201 });
-});
+}, { feature: "write" });
 
 /** 빼기. */
 export const DELETE = route(async (req) => {
@@ -31,4 +31,4 @@ export const DELETE = route(async (req) => {
   const t = await readJson(req, target);
   await removeFromCart(user.id, t);
   return NextResponse.json({ ok: true });
-});
+}, { feature: "write" });

@@ -13,4 +13,4 @@ export const DELETE = route<Ctx>(async (req, { params }) => {
   const { id } = await params;
   await revokeDevice({ kind: "user", id: user.id }, id);
   return NextResponse.json({ ok: true });
-});
+}, { feature: "write" });

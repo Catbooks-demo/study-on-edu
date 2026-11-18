@@ -19,7 +19,7 @@ const body = z.object({
 export const GET = route(async (req) => {
   const user = await requireUser(req);
   return NextResponse.json({ user: publicUser(user) });
-});
+}, { feature: "browse" });
 
 /** 회원 정보 고치기. */
 export const PATCH = route(async (req) => {
@@ -27,4 +27,4 @@ export const PATCH = route(async (req) => {
   const input = await readJson(req, body);
   const u = await db.user.update({ where: { id: user.id }, data: input });
   return NextResponse.json({ user: publicUser(u) });
-});
+}, { feature: "write" });

@@ -72,7 +72,6 @@ jobs:
       SEED_STAFF_PASSWORD: e2e-admin-pass
       SEED_INSTRUCTOR_PASSWORD: e2e-instructor-pass
       NEXT_PUBLIC_HEARTBEAT_SEC: "2"
-      FAULTS_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -99,3 +98,41 @@ jobs:
           path: screens
           retention-days: 7
           if-no-files-found: ignore
+
+  docker:
+    # 온프레미스 배포 연습: docs/deploy.md 순서대로 compose로 띄우고 시드·상태 확인·재시작까지
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: .env 만들기 (CI 전용 값)
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-db-pass/' .env
+          sed -i 's/^SESSION_SECRET=.*/SESSION_SECRET=ci-only-session-secret-0123456789abcdef/' .env
+          sed -i 's/^SEED_STAFF_EMAIL=.*/SEED_STAFF_EMAIL=admin@studyon.test/' .env
+          sed -i 's/^SEED_STAFF_PASSWORD=.*/SEED_STAFF_PASSWORD=ci-only-admin-pass/' .env
+          sed -i 's/^SEED_INSTRUCTOR_PASSWORD=.*/SEED_INSTRUCTOR_PASSWORD=ci-only-instructor-pass/' .env
+      - run: docker compose config -q
+      - run: docker compose up -d --build --wait --wait-timeout 300
+      - run: docker compose exec -T app npm run db:seed
+      - name: 상태 확인
+        run: |
+          curl -fsS http://127.0.0.1:3200/healthz
+          curl -fsS http://127.0.0.1:3200/readyz
+          curl -fsS http://127.0.0.1:3200/ | grep -q "스터디온에듀"
+          curl -fsS "http://127.0.0.1:3200/courses?category=DEV" | grep -q "SO-DEV-"
+          curl -fsS http://127.0.0.1:3200/status | grep -q "정상이에요"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3200/metrics)" = "401"
+          curl -fsS http://127.0.0.1:3200/api/v1/openapi.json | grep -q "스터디온에듀 외부 시스템 API"
+      - name: 지표 키 발급 → /metrics 200
+        run: |
+          KEY=$(docker compose exec -T app npm run -s apikey -- --name ci-prometheus --scopes metrics | tail -1)
+          curl -fsS -H "Authorization: Bearer $KEY" http://127.0.0.1:3200/metrics | grep -q "studyon_db_connections"
+      - name: 다시 켜도 데이터가 남는다
+        run: |
+          docker compose restart app
+          docker compose up -d --wait --wait-timeout 120
+          curl -fsS "http://127.0.0.1:3200/courses?category=DEV" | grep -q "SO-DEV-"
+      - if: failure()
+        run: docker compose logs --tail 200

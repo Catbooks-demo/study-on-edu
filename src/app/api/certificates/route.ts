@@ -17,4 +17,4 @@ export const POST = route(async (req) => {
   if (!course) throw new HttpError(404, "NOT_FOUND", "강의를 찾지 못했어요.");
   const c = await issueCertificate(user.id, course.id);
   return NextResponse.json({ certificate: certificateView(c) }, { status: 201 });
-});
+}, { feature: "play" });

@@ -78,4 +78,4 @@ export const GET = route<Ctx>(async (req, { params }) => {
       "X-Accel-Buffering": "no",
     },
   });
-});
+}, { feature: "browse" });

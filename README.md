@@ -3,7 +3,33 @@
 시연용 가상 온라인 강의 플랫폼이에요. 실제 회사·강사·서비스가 아니에요.
 
 - 설계: [docs/superpowers/specs/2026-11-18-study-on-edu-design.md](docs/superpowers/specs/2026-11-18-study-on-edu-design.md)
-- 기본 브랜치는 `dev`이고, 변경은 PR로만 올려요.
+- 기본 브랜치는 `dev`이고, 변경은 PR로만 올려요. CI(`web`·`e2e`·`docker`)가 초록이어야 머지해요.
+
+## 실행 (개발)
+
+```bash
+cp .env.example .env          # DATABASE_URL·SESSION_SECRET 등을 채운다 (.env는 커밋하지 않는다)
+npm ci
+npx prisma migrate deploy
+npm run db:seed
+npm run dev                   # http://localhost:3000
+```
+
+- 수강생 화면 `/`, 강사 화면 `/instructor`, 직원 화면 `/admin`, 운영 화면 `/admin/ops`(대기열·서비스 모드·장애 공지), 상태 페이지 `/status`
+- 토스 테스트 키가 없으면 모의 결제로 돌아요. `live_` 키는 받지 않아요.
+
+## 배포
+
+[docs/deploy.md](docs/deploy.md): Docker Compose(리눅스 서버)와 Windows PC 직접 설치(앱 `127.0.0.1:3201` + Node 프록시 `:3200` + PostgreSQL 16 `:5433`, `update.ps1`) 두 가지, nginx·프록시 헤더, 백업·업데이트·되돌리기, 지표·대기열·서비스 모드·웹훅 쓰는 법.
+
+## 외부 시스템 API
+
+- 설명: `/api/v1/openapi.json` (OpenAPI 3.1)
+- 키: `npm run apikey -- --name <이름> --scopes read,write,metrics` (원문은 한 번만 보여요)
+- 읽기: 강의·강사·주문·결제·환불·구독·수강권·문의·장애 공지·대기열·서비스 모드
+- 쓰기(write): 서비스 모드, 장애 공지, 대기열 켜기·한도, 쿠폰
+- 지표: `/metrics` (Prometheus, `metrics` 범위 키)
+- 웹훅: `order.paid`, `order.refunded`, `subscription.status_changed`, `service_mode.changed`, `incident.created`, `incident.updated` (서명 `X-StudyOn-Signature`)
 
 ## 가상 이용자 데이터 (AXcellent 연결 시험용)
 

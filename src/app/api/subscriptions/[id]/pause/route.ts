@@ -17,4 +17,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const { days } = await readJson(req, body);
   const s = await pause(user.id, id, days);
   return NextResponse.json({ subscription: subscriptionView(s) });
-});
+}, { feature: "write" });

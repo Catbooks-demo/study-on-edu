@@ -13,7 +13,7 @@ export type Perm =
   | "live"
   | "support" // 문의·질문·후기·보낸 편지함
   | "content_pages" // 공지·FAQ
-  | "ops" // 대기열·서비스 모드·장애 공지·장애 주입·지표
+  | "ops" // 대기열·서비스 모드·장애 공지·지표
   | "staff"
   | "api_keys"
   | "audit";

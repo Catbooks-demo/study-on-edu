@@ -3,7 +3,7 @@ import type { Order, Payment, SubscriptionInvoice } from "@prisma/client";
 import { db } from "../db";
 import { grantForOrder } from "../enrollments";
 import { tossEnabled } from "../env";
-import { onPaymentAttempt, paymentFailRate } from "../hooks";
+import { onOrderPaid, onPaymentAttempt, paymentFailRate } from "../hooks";
 import { HttpError } from "../http";
 import { log } from "../log";
 import { recordMessage, won } from "../messages";
@@ -97,6 +97,7 @@ async function applyApproved(tx: Tx, paymentId: string, paymentKey: string | nul
     const order = await tx.order.update({ where: { id: o.id }, data: { status: "paid", paid_at: now } });
     await grantForOrder(tx, o.id, now);
     const user = await tx.user.findUniqueOrThrow({ where: { id: o.user_id } });
+    await onOrderPaid(tx, order, user, pay.amount, now);
     await recordMessage(
       tx, user, "payment_done", "결제 완료",
       `결제가 완료됐어요. 내 강의실에서 바로 들을 수 있어요. (주문번호 ${o.code} · 결제 금액 ${won(pay.amount)})`,

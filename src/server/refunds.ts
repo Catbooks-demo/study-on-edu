@@ -4,6 +4,7 @@ import { type RefundQuote, courseRefund, subscriptionRefund } from "@/rules/refu
 import { audit } from "./audit";
 import { db } from "./db";
 import { refundEnrollments } from "./enrollments";
+import { onOrderRefunded } from "./hooks";
 import { HttpError } from "./http";
 import { subscriptionWatchedSec, usageFor } from "./learning-usage";
 import { log } from "./log";
@@ -171,12 +172,13 @@ export async function settleRefund(refundId: string, now: Date = new Date()): Pr
       const done = await tx.refund.update({ where: { id: cur.id }, data: { status: "done", done_at: now } });
       await tx.orderItem.update({ where: { id: item.id }, data: { status: "refunded", refunded_amount: cur.amount } });
       const stillActive = await tx.orderItem.count({ where: { order_id: order.id, status: "active" } });
-      await tx.order.update({
+      const after = await tx.order.update({
         where: { id: order.id },
         data: { refunded_amount: { increment: cur.amount }, status: stillActive ? "partially_refunded" : "refunded" },
       });
       await refundEnrollments(tx, item.id, now);
       const user = await tx.user.findUniqueOrThrow({ where: { id: cur.user_id } });
+      await onOrderRefunded(tx, after, user, { refund_id: cur.id, order_item_id: item.id, amount: cur.amount }, now);
       await recordMessage(
         tx, user, "refund_done", "환불 완료",
         `환불이 끝났어요. ${won(cur.amount)}을 결제한 수단으로 돌려드렸어요. (주문번호 ${order.code})`,

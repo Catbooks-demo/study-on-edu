@@ -17,4 +17,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const { card_last4 } = await readJson(req, body);
   const s = await changeCard(user.id, id, card_last4);
   return NextResponse.json({ subscription: subscriptionView(s) });
-});
+}, { feature: "write" });

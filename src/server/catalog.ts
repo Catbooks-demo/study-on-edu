@@ -1,14 +1,15 @@
 import type { Prisma } from "@prisma/client";
 import { REFUND_RULES } from "@/lib/refund-terms";
 import { effectivePrice } from "@/rules/pricing";
+import type { Mode } from "@/rules/servicemode";
 import { db } from "./db";
 
 /** 강의 목록 한 쪽에 보여 줄 수. */
 export const PAGE_SIZE = 24;
 
-/** 목록 캐시 시간(초). 서비스 모드별 값은 Task 21에서 정한다. */
-export function listCacheTtlSec(): number {
-  return 30;
+/** 목록 캐시 시간(초): 정상 30초, 그 밖의 모드(degraded 등)는 300초로 DB 읽기를 줄인다. */
+export function listCacheTtlSec(mode: Mode = "normal"): number {
+  return mode === "normal" ? 30 : 300;
 }
 
 export type Level = "beginner" | "intermediate" | "advanced";

@@ -16,7 +16,7 @@ const body = z.object({
 export const GET = route(async (req) => {
   const user = await requireUser(req);
   return NextResponse.json({ inquiries: (await listMyInquiries(user.id)).map(inquiryView) });
-});
+}, { feature: "browse" });
 
 /** 1:1 문의 쓰기 (계정 10회/10분). */
 export const POST = route(async (req) => {
@@ -24,4 +24,4 @@ export const POST = route(async (req) => {
   const input = await readJson(req, body);
   const q = await createInquiry(user.id, input);
   return NextResponse.json({ inquiry: inquiryView(q) }, { status: 201 });
-});
+}, { feature: "write" });

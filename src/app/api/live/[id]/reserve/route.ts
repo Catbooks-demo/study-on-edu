@@ -13,4 +13,4 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const { id } = await params;
   const seat = await reserveSeat(user.id, id);
   return NextResponse.json({ seat: { id: seat.id, reserved_at: seat.reserved_at.toISOString(), entered_at: seat.entered_at?.toISOString() ?? null } });
-});
+}, { feature: "write" });

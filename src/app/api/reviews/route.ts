@@ -18,4 +18,4 @@ export const POST = route(async (req) => {
   const { course_code, ...input } = await readJson(req, body);
   const r = await writeReview(user.id, course_code, input);
   return NextResponse.json({ review: { id: r.id, rating: r.rating } }, { status: 201 });
-});
+}, { feature: "heavy" });

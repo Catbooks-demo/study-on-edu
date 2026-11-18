@@ -16,7 +16,7 @@ export const PATCH = route<Ctx>(async (req, { params }) => {
   const { id } = await params;
   const input = await readJson(req, body);
   return NextResponse.json({ note: noteView(await updateNote(user.id, id, input.body)) });
-});
+}, { feature: "write" });
 
 /** 노트 지우기 (본인 것만). */
 export const DELETE = route<Ctx>(async (req, { params }) => {
@@ -24,4 +24,4 @@ export const DELETE = route<Ctx>(async (req, { params }) => {
   const { id } = await params;
   await deleteNote(user.id, id);
   return NextResponse.json({ ok: true });
-});
+}, { feature: "write" });
