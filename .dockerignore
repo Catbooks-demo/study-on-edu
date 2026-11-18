@@ -11,3 +11,4 @@ test-results
 screens
 .superpowers
 tsconfig.tsbuildinfo
+synthetic-out
