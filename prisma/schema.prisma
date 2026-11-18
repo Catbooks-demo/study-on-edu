@@ -9,3 +9,15 @@ datasource db {
 
 // 금액은 모두 정수 원. 시각은 UTC로 저장하고 화면·날짜 계산은 한국 시간.
 // 표·컬럼 이름은 영어 snake_case.
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actor      String // staff:<id>, instructor:<id>, api:<키 이름>, system
+  action     String
+  target     String
+  detail     Json?
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+  @@map("audit_logs")
+}
