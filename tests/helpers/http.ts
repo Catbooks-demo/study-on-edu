@@ -3,6 +3,7 @@ type AnyHandler = (req: Request, ctx: never) => Promise<Response> | Response;
 export interface CallResult<T = Record<string, unknown>> {
   status: number;
   body: T;
+  headers: Headers;
   cookie: (name: string) => string | undefined;
 }
 
@@ -37,6 +38,7 @@ export async function call<T = any>( // eslint-disable-line @typescript-eslint/n
   return {
     status: res.status,
     body: (text ? JSON.parse(text) : {}) as T,
+    headers: res.headers,
     cookie: (name) => {
       const line = setCookies.find((c) => c.startsWith(`${name}=`));
       return line ? decodeURIComponent(line.slice(name.length + 1).split(";")[0]) : undefined;
