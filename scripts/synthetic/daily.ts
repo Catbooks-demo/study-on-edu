@@ -144,6 +144,7 @@ async function dailyLoop(o: DailyOptions, state: DailyState, statePath: string):
       planned: p.intents.length,
       inserted: s.inserted,
       lost: s.lost,
+      skipped: s.skipped ?? 0,
       missed: s.missed,
       by_kind: s.byKind,
       by_cat: s.byCat,

@@ -32,3 +32,18 @@ export async function withJobLock<T>(name: string, fn: () => Promise<T>): Promis
   if (!outcome.ok) throw outcome.error;
   return outcome.value;
 }
+
+/**
+ * 가상 데이터 되채우기(scripts/gen-synthetic.ts)가 도는 동안 잡고 있는 잠금 이름.
+ * 되채우기는 지난 시각으로 주문·구독을 넣으므로, 그동안 앱의 주기 작업이 지금 시각으로 돌면
+ * 막 만든 주문을 결제 기한 초과로 취소하거나 구독을 갱신해 버린다. 그래서 앱은 이 잠금이 잡혀 있으면 쉰다.
+ */
+export const SYNTH_BACKFILL_LOCK = "synth:backfill";
+
+/** 되채우기가 지금 돌고 있는지 (그 잠금을 다른 연결이 잡고 있으면 true). */
+export async function backfillRunning(): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    const r = await tx.$queryRaw<{ ok: boolean }[]>`SELECT pg_try_advisory_xact_lock_shared(hashtext(${SYNTH_BACKFILL_LOCK})) AS ok`;
+    return !r[0]?.ok;
+  });
+}

@@ -299,10 +299,16 @@ export async function answerKey(model: Model, plans: DayPlan[], ctx: Ctx, cutoff
       devices: DEVICE_TYPES.map((d, j) => ({ type: DEVICE_KO[d], design: DEVICE_SHARE[j], actual: share(devCount[j], devTotal) })),
       two_devices: share(model.members.filter((m) => m.devices.length === 2).length, model.members.length),
     },
+    skipped: {
+      설명: "서버가 업무 오류(4xx: 이미 결제·취소된 주문, 이미 끝난 환불 등)로 받지 않아 건너뛴 일. 종류:오류 코드 → 수. 결제 계획은 intent:*. 날짜별은 by_day[].skipped(결제 계획)와 followups.skipped_<종류>.",
+      total: Object.values(ctx.extra.skips ?? {}).reduce((a, b) => a + b, 0),
+      by_reason: ctx.extra.skips ?? {},
+    },
     purchases: {
       planned: plans.reduce((s, p) => s + p.intents.filter((i) => i.t <= cutoff).length, 0),
       inserted: totalKinds,
       lost: [...ctx.stats.values()].reduce((s, d: DayStats) => s + d.lost, 0),
+      skipped: [...ctx.stats.values()].reduce((s, d: DayStats) => s + (d.skipped ?? 0), 0),
       by_kind: PRODUCT_KINDS.map((k, j) => ({ kind: k, design_share: PRODUCT_MIX[j] / 100, count: kinds[k], share: share(kinds[k], totalKinds) })),
       by_category: CATEGORY_CODES.map((c) => ({ code: c, name: CATEGORY_KO[c], design_amount_share: CATEGORY_SHARE[c] / 100, count: catCount[c], amount: catAmount[c], amount_share: share(catAmount[c], amountTotal) })),
       discount: {
@@ -326,6 +332,7 @@ export async function answerKey(model: Model, plans: DayPlan[], ctx: Ctx, cutoff
         planned: s?.planned ?? 0,
         inserted: s?.inserted ?? 0,
         lost: s?.lost ?? 0,
+        skipped: s?.skipped ?? 0,
         by_kind: s?.byKind ?? {},
         by_cat: s?.byCat ?? {},
         followups: s?.followups ?? {},
