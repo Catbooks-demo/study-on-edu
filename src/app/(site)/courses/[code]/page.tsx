@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CourseThumb } from "@/components/CourseThumb";
 import { CurriculumList } from "@/components/CurriculumList";
 import { DemoBadge } from "@/components/DemoBadge";
+import { InstructorAvatar } from "@/components/InstructorAvatar";
+import { LecturePlayer } from "@/components/LecturePlayer";
 import { PriceBox } from "@/components/PriceBox";
 import { RatingBars } from "@/components/RatingBars";
 import { Stars } from "@/components/Stars";
+import { clipFromLecture } from "@/lib/fakevideo/clips";
 import { LEVEL_LABEL, accessLabel, durationKo, won } from "@/lib/format";
 import { getCourse } from "@/server/catalog";
 
@@ -31,7 +33,13 @@ const TABS = [
 export default async function CoursePage({ params }: Props) {
   const c = await getCourse((await params).code);
   if (!c) notFound();
-  const firstPreview = c.sections.flatMap((s) => s.lectures).find((l) => l.is_preview);
+  const clip = clipFromLecture({
+    code: c.code,
+    category: c.category.code,
+    courseTitle: c.title,
+    lectureTitle: c.preview?.title ?? c.title,
+    script: c.preview?.script ?? null,
+  });
 
   return (
     <div>
@@ -60,14 +68,14 @@ export default async function CoursePage({ params }: Props) {
               {c.tags.map((t) => <li key={t} className="badge bg-lemon-300/40 text-ink ring-lemon-400/60">#{t}</li>)}
             </ul>
           </div>
-          <div className="relative overflow-hidden rounded-2xl shadow-xl shadow-brand-200/50">
-            <CourseThumb code={c.code} category={c.category.code} className="aspect-video w-full" />
-            {firstPreview && (
-              <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/80 to-transparent px-4 pb-3 pt-10 text-sm font-semibold text-white">
-                ▶ 맛보기: {firstPreview.title}
-              </p>
-            )}
-          </div>
+          <figure>
+            <div className="overflow-hidden rounded-2xl border-4 border-ink shadow-[0_20px_50px_-20px_rgba(60,36,184,0.5)]">
+              <LecturePlayer clip={clip} label={`${c.title} 맛보기`} autoPlay={false} controls className="aspect-video w-full" testId="preview-player" />
+            </div>
+            <figcaption className="mt-2 text-sm text-slate-600">
+              <span className="font-semibold text-ink">맛보기</span> {c.preview?.title ?? "강의 미리보기"}
+            </figcaption>
+          </figure>
         </div>
       </section>
 
@@ -111,9 +119,7 @@ export default async function CoursePage({ params }: Props) {
           <section id="instructor" className="scroll-mt-40">
             <h2 className="text-xl font-bold">강사 소개</h2>
             <div className="mt-3 flex gap-4 rounded-2xl bg-white p-5 ring-1 ring-slate-200">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-brand-100 text-lg font-extrabold text-brand-700" aria-hidden="true">
-                {c.instructor.display_name.slice(0, 1)}
-              </span>
+              <InstructorAvatar slug={c.instructor.slug} name={c.instructor.display_name} size={56} />
               <div>
                 <p className="flex flex-wrap items-center gap-2">
                   <Link href={`/instructors/${c.instructor.slug}`} className="font-bold hover:text-brand-700">{c.instructor.display_name}</Link>

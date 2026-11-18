@@ -204,6 +204,8 @@ export interface CourseDetail extends CourseSummary {
   reviews: { rating: number; body: string; author: string; created_at: string }[];
   bundles: { code: string; title: string; price: number }[];
   refund_summary: string[];
+  /** 맛보기: 첫 미리보기 강의 가짜 영상 스크립트 */
+  preview: { title: string; script: { slides: { at: number; title: string; bullets: string[] }[]; captions: { at: number; text: string }[] } | null } | null;
 }
 
 /** 후기 작성자 이름 가리기: 앞 한두 글자와 끝 글자만 보인다 ("새벽공부러" → "새벽**러"). */
@@ -241,6 +243,8 @@ export async function getCourse(code: string, now = new Date()): Promise<CourseD
   ]);
   const rating_dist = [1, 2, 3, 4, 5].map((r) => dist.find((d) => d.rating === r)?._count._all ?? 0);
   const lectures = c.sections.flatMap((s) => s.lectures);
+  const pv = lectures.find((l) => l.is_preview);
+  const pvScript = pv?.script as { slides?: unknown; captions?: unknown } | undefined;
   const totals = new Map([[c.id, { sec: lectures.reduce((a, l) => a + l.duration_sec, 0), count: lectures.length }]]);
   const base = toSummary(c, totals, now);
 
@@ -274,6 +278,15 @@ export async function getCourse(code: string, now = new Date()): Promise<CourseD
     })),
     bundles: c.bundles.filter((b) => b.bundle.active).map((b) => ({ code: b.bundle.code, title: b.bundle.title, price: b.bundle.price })),
     refund_summary: REFUND_RULES,
+    preview: pv
+      ? {
+          title: pv.title,
+          script:
+            pvScript && Array.isArray(pvScript.slides) && Array.isArray(pvScript.captions)
+              ? (pvScript as NonNullable<CourseDetail["preview"]>["script"])
+              : null,
+        }
+      : null,
   };
 }
 
@@ -317,8 +330,48 @@ export async function upcomingLive(now = new Date(), opts: { take?: number; inst
   }));
 }
 
+export interface InstructorHighlight {
+  slug: string;
+  display_name: string;
+  bio: string;
+  course_count: number;
+  review_count: number;
+  rating_avg: number;
+  top: { code: string; title: string } | null;
+}
+
+/** 메인 "강사 소개": 공개 강의 수강평이 많은 강사 순. */
+export async function instructorHighlights(take = 6): Promise<InstructorHighlight[]> {
+  const rows = await db.instructor.findMany({
+    where: { status: "active", courses: { some: { status: "published" } } },
+    include: {
+      courses: {
+        where: { status: "published" },
+        select: { code: true, title: true, rating_avg: true, rating_count: true },
+        orderBy: [{ rating_count: "desc" }, { code: "asc" }],
+      },
+    },
+  });
+  return rows
+    .map((i) => {
+      const review_count = i.courses.reduce((a, c) => a + c.rating_count, 0);
+      const sum = i.courses.reduce((a, c) => a + c.rating_avg * c.rating_count, 0);
+      return {
+        slug: i.slug,
+        display_name: i.display_name,
+        bio: i.bio,
+        course_count: i.courses.length,
+        review_count,
+        rating_avg: review_count ? Math.round((sum / review_count) * 10) / 10 : 0,
+        top: i.courses[0] ? { code: i.courses[0].code, title: i.courses[0].title } : null,
+      };
+    })
+    .sort((a, b) => b.review_count - a.review_count || a.slug.localeCompare(b.slug))
+    .slice(0, take);
+}
+
 export async function homeSections(now = new Date()) {
-  const [popular, promoRows, live, notices] = await Promise.all([
+  const [popular, promoRows, live, notices, instructors] = await Promise.all([
     searchCourses({ sort: "popular" }, now),
     db.course.findMany({
       where: { status: "published", tags: { some: { tag: { name: PROMO_TAG } } } },
@@ -327,12 +380,14 @@ export async function homeSections(now = new Date()) {
     }),
     upcomingLive(now, { take: 6 }),
     db.notice.findMany({ where: { published: true }, orderBy: [{ pinned: "desc" }, { created_at: "desc" }], take: 4 }),
+    instructorHighlights(6),
   ]);
   return {
     popular: popular.items.slice(0, 8),
     promo: { title: PROMO_TITLE, items: await summarize(promoRows, now) },
     live,
     notices: notices.map((n) => ({ id: n.id, title: n.title, pinned: n.pinned, created_at: n.created_at.toISOString() })),
+    instructors,
   };
 }
 

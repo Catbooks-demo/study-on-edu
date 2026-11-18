@@ -67,3 +67,9 @@ describe("가상 강사 아바타", () => {
     expect(html).not.toMatch(/<img|<image/);
   });
 });
+
+describe("제목 줄바꿈 (긴 낱말)", () => {
+  it("splits a long word instead of dropping its tail", () => {
+    expect(wrapTitle("TypeScript로", 7, 2)).toEqual(["TypeScr", "ipt로"]);
+  });
+});

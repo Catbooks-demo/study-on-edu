@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CourseGrid } from "@/components/CourseCard";
 import { DemoBadge } from "@/components/DemoBadge";
+import { InstructorAvatar } from "@/components/InstructorAvatar";
 import { dateTimeKo } from "@/lib/format";
 import { getInstructorPage } from "@/server/catalog";
 
@@ -22,9 +23,7 @@ export default async function InstructorPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <section className="flex flex-col gap-6 rounded-3xl bg-white p-6 ring-1 ring-slate-200 sm:flex-row sm:items-center sm:p-8">
-        <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-300 text-3xl font-extrabold text-white" aria-hidden="true">
-          {i.display_name.slice(0, 1)}
-        </span>
+        <InstructorAvatar slug={i.slug} name={i.display_name} size={88} />
         <div className="flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">
             {i.display_name} <DemoBadge />

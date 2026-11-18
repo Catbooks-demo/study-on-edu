@@ -8,7 +8,8 @@ import { EXAMS, ddayLabel, examStatus } from "@/lib/exams";
 import { clipForCourse, clipFromLecture, heroClip } from "@/lib/fakevideo/clips";
 import { type Op, clipDuration, composeFrame, partial, posterTime, scribble } from "@/lib/fakevideo/frame";
 
-const texts = (ops: Op[]) => ops.filter((o): o is Extract<Op, { op: "text" }> => o.op === "text").map((o) => o.text);
+const texts = (ops: Op[]) =>
+  ops.flatMap((o) => (o.op === "text" ? [o.text] : o.op === "run" ? [o.parts.map((p) => p.text).join("")] : []));
 
 describe("가짜 영상 렌더러", () => {
   it("hero clip loops in 8..15 seconds", () => {
