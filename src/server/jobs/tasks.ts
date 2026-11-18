@@ -3,6 +3,7 @@ import { advanceLiveStatus } from "../live";
 import { log } from "../log";
 import { cancelPendingOrder, lockOrder } from "../orders";
 import { reconcilePending } from "../payments";
+import { queueHousekeeping } from "../queue";
 import { settleRefund, stuckRefundIds } from "../refunds";
 import { monthlySettlement } from "../settlements";
 import { endSubscriptions, renewSubscriptions, resumePaused, retryFailedInvoices } from "../subscriptions";
@@ -68,6 +69,8 @@ export const JOBS: Record<string, (now: Date) => Promise<number>> = {
   // 정산: 달이 바뀐 뒤 첫 작업에서 전월분 (KST)
   monthlySettlement,
   purgeExpiredSessions,
+  // 대기열: 라이브 대기열 자동 켜기·끄기, 60초 미접속 대기표 만료
+  queueHousekeeping,
 };
 
 /**

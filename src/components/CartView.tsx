@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { api, waitingUrl } from "@/lib/api";
 import { discountPct, won } from "@/lib/format";
 import { CourseThumb } from "./CourseThumb";
 
@@ -41,6 +41,11 @@ export function CartView({ lines, listTotal, discountTotal, payable }: { lines: 
       const r = await api<{ order: { code: string } }>("/api/orders", {});
       router.push(`/checkout/${r.order.code}`);
     } catch (e) {
+      const wait = waitingUrl(e, "/cart");
+      if (wait) {
+        window.location.assign(wait);
+        return;
+      }
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
     }

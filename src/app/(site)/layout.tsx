@@ -1,16 +1,30 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Footer } from "@/components/Footer";
 import { Logo } from "@/components/Logo";
 import { MaintenanceNotice } from "@/components/MaintenanceNotice";
 import { ModeBanner } from "@/components/ModeBanner";
 import { currentStaff, currentUser } from "@/server/auth/current";
 import { listCategories } from "@/server/catalog";
+import { admitCookieName, getSetting, verifyAdmit } from "@/server/queue";
 import { currentMode } from "@/server/servicemode";
 import { listIncidents } from "@/server/status";
 
 /** 점검 중에도 열리는 경로 (proxy.ts가 x-so-path로 넘긴다). */
 const ALWAYS_OPEN = ["/status", "/maintenance"];
+/** 사이트 대기열 문에서 빼는 경로 (API·직원·강사 화면·지표·상태 확인은 이 레이아웃을 지나지 않는다). */
+const QUEUE_OPEN = ["/waiting", "/status", "/maintenance"];
+
+/** 사이트 대기열이 켜져 있으면 입장 쿠키가 있어야 들어온다. 없으면 대기실로. */
+async function siteGate(path: string | null, full: string | null): Promise<void> {
+  if (!path || isOpen(path, QUEUE_OPEN)) return;
+  const s = await getSetting("site").catch(() => null);
+  if (!s?.enabled) return;
+  const tok = (await cookies()).get(admitCookieName("site"))?.value;
+  if (tok && verifyAdmit(tok, "site", new Date())) return;
+  redirect(`/waiting?target=site&next=${encodeURIComponent(full ?? "/")}`);
+}
 const pathOnly = (p: string | null) => (p ? p.split("?")[0] : null);
 const isOpen = (p: string | null, list: string[]) => !!p && list.some((x) => p === x || p.startsWith(`${x}/`));
 
@@ -18,7 +32,9 @@ export const dynamic = "force-dynamic";
 
 /** 수강생 화면 공통 틀: 헤더(검색·메뉴·분야), 배너 자리, 푸터. */
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const path = pathOnly((await headers()).get("x-so-path"));
+  const full = (await headers()).get("x-so-path");
+  const path = pathOnly(full);
+  await siteGate(path, full);
   const [user, categories, mode, open] = await Promise.all([
     currentUser(),
     listCategories(),

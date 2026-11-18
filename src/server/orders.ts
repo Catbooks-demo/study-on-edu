@@ -33,6 +33,8 @@ export type CreateOrderInput = {
   coupon_code?: string | null;
   /** 판매가를 정하는 시각. 대기열 순번표 시각 가격(Task 22)용이라 서버 안에서만 넘긴다. */
   price_at?: Date;
+  /** 결제 캠페인 대기열 순번표 발급 시각 (할인 마감 연장, Task 22). 서버 안에서만 넘긴다. */
+  held_at?: Date;
 };
 
 /**
@@ -44,7 +46,7 @@ export async function createOrder(userId: string, input: CreateOrderInput, now: 
   return db.$transaction(
     async (tx) => {
       if (code) await validateCoupon(tx, code, userId, null, now);
-      const lines = await cartLines(tx, userId, input.price_at ?? now);
+      const lines = await cartLines(tx, userId, input.price_at ?? now, input.held_at);
       if (!lines.length) throw new HttpError(400, "EMPTY_CART", "장바구니가 비어 있어요.");
       for (const l of lines) {
         if (l.course_id && (await ownsCourse(tx, userId, l.course_id, now))) {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { api, waitingUrl } from "@/lib/api";
 
 /** 라이브 상세의 버튼: 로그인 → 예약 → (시작 10분 전부터) 입장. */
 export function LiveActions(props: { id: string; loggedIn: boolean; reserved: boolean; full: boolean; open: boolean; closed: boolean }) {
@@ -20,6 +20,11 @@ export function LiveActions(props: { id: string; loggedIn: boolean; reserved: bo
       if (path === "enter" && r.room_url) router.push(r.room_url);
       else router.refresh();
     } catch (e) {
+      const wait = path === "enter" ? waitingUrl(e, `/live/${id}`) : null;
+      if (wait) {
+        window.location.assign(wait);
+        return;
+      }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
