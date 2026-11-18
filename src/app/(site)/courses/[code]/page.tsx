@@ -183,6 +183,7 @@ export default async function CoursePage({ params }: Props) {
             totalSec={c.total_sec}
             lectureCount={c.lecture_count}
             inSubscription={c.in_subscription}
+            courseCode={c.code}
           />
           {c.bundles.length > 0 && (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">

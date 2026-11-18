@@ -1,5 +1,5 @@
-/** 로그인 뒤 이동할 곳: 우리 사이트 안의 경로만 (//, /\, 다른 주소 거부). /my는 Task 9에서 생기면 기본값을 바꾼다. */
-export function safeNext(next: string | undefined, fallback = "/"): string {
+/** 로그인 뒤 이동할 곳: 우리 사이트 안의 경로만 (//, /\, 다른 주소 거부). 없으면 마이페이지. */
+export function safeNext(next: string | undefined, fallback = "/my"): string {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
   try {
     const u = new URL(next, "http://studyon.local");

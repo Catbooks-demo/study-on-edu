@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { accessLabel, dateTimeKo, discountPct, durationKo, won } from "@/lib/format";
+import { CartButton } from "./CartButton";
 
-/** 강의·패키지 가격 상자. 결제(장바구니)는 Task 7에서 붙인다. */
+/** 강의·패키지 가격 상자. 수강 신청하면 장바구니에 담는다. */
 export function PriceBox(props: {
   unit: number;
   list: number;
@@ -11,6 +12,8 @@ export function PriceBox(props: {
   totalSec: number;
   lectureCount: number;
   inSubscription?: boolean;
+  courseCode?: string;
+  bundleCode?: string;
 }) {
   const { unit, list, onSale, saleEndsAt } = props;
   return (
@@ -31,7 +34,11 @@ export function PriceBox(props: {
         <dt className="text-slate-500">강의 구성</dt>
         <dd className="font-medium">{props.lectureCount}개 강 · {durationKo(props.totalSec)}</dd>
       </dl>
-      <button type="button" disabled className="btn-primary mt-5 w-full">수강 신청은 곧 열려요</button>
+      {props.courseCode || props.bundleCode ? (
+        <CartButton courseCode={props.courseCode} bundleCode={props.bundleCode} />
+      ) : (
+        <button type="button" disabled className="btn-primary mt-5 w-full">지금은 신청할 수 없어요</button>
+      )}
       {props.inSubscription && (
         <Link href="/subscribe" className="btn-line mt-2 w-full">구독으로 듣기</Link>
       )}

@@ -38,6 +38,7 @@ export default async function BundlePage({ params }: Props) {
           accessDays={b.access_days}
           totalSec={b.total_sec}
           lectureCount={b.courses.reduce((a, c) => a + c.lecture_count, 0)}
+          bundleCode={b.code}
         />
       </aside>
     </div>

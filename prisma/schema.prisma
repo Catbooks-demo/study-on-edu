@@ -390,6 +390,9 @@ model Payment {
   refund_of_id     String?
   refund_of        Payment?             @relation("RefundOf", fields: [refund_of_id], references: [id])
   refunds          Payment[]            @relation("RefundOf")
+  /// 환불 행이면 어느 환불 요청 몫인지 (다시 시도할 때 이미 돌려준 금액을 세려고)
+  refund_id        String?
+  refund           Refund?              @relation(fields: [refund_id], references: [id])
   failure_reason   String?
   approved_at      DateTime?
   created_at       DateTime             @default(now())
@@ -397,6 +400,7 @@ model Payment {
 
   @@index([order_id])
   @@index([invoice_id])
+  @@index([refund_id])
   @@index([updated_at])
   @@map("payments")
 }
@@ -793,6 +797,7 @@ model Refund {
   approved_at   DateTime?
   done_at       DateTime?
   reject_reason String?
+  payments      Payment[]
   created_at    DateTime             @default(now())
   updated_at    DateTime             @updatedAt
 
