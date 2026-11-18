@@ -328,7 +328,7 @@ export interface Persona {
   code: string;
   name: string;
   desc: string;
-  share: number; // 회원 비중 (%)
+  share: number; // 회원 비중 (설계 표 그대로 %, 더하면 90이라 이 비율대로 나눠 쓴다)
   spend: number | null; // 연 지출(만 원). null = 평균
   ages: readonly [number, number];
   female: number;

@@ -54,7 +54,8 @@ describe("가상 이용자: 비중", () => {
     expect(sum(AGE_SHARE.map((a) => a[1]))).toBeCloseTo(100, 6);
     expect(sum(DEVICE_SHARE)).toBeCloseTo(100, 6);
     expect(sum(PRODUCT_MIX)).toBeCloseTo(100, 6);
-    expect(sum(PERSONAS.map((p) => p.share))).toBeCloseTo(100, 6);
+    // 설계 4절 유형표의 회원 비중은 더하면 90%라, 그 비율대로(각 ÷ 0.9) 나눠 쓴다
+    expect(sum(PERSONAS.map((p) => p.share))).toBeCloseTo(90, 6);
     expect(PERSONAS).toHaveLength(13);
   });
 
