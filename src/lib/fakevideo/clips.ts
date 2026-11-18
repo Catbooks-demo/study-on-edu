@@ -160,3 +160,46 @@ export function clipFromLecture(c: { code: string; category: string; courseTitle
       : [{ at: 0, text: "맛보기 영상이에요." }],
   };
 }
+
+/**
+ * 플레이어용 클립: 강 전체 길이(duration_sec)만큼 이어지는 가짜 영상.
+ * 슬라이드는 script.slides[].at에 바뀌고 자막은 script.captions[].at에 바뀐다.
+ * 가운데 슬라이드 하나는 분야에 맞는 코드·차트·문제 장면으로 바꿔 화면이 단조롭지 않게 한다.
+ */
+export function clipFromScript(c: {
+  code: string;
+  category: string;
+  courseTitle: string;
+  lectureTitle: string;
+  lectureId: string;
+  duration_sec: number;
+  script: LectureScriptLike | null;
+}): Clip {
+  const duration = Math.max(1, c.duration_sec);
+  const raw = (c.script?.slides ?? []).filter((s) => s.at >= 0 && s.at < duration).sort((a, b) => a.at - b.at);
+  const slides = raw.length && raw[0].at === 0 ? raw : [{ at: 0, title: c.lectureTitle, bullets: ["이번 강에서 다룰 내용"] }, ...raw];
+  const special = slides.length >= 3 ? Math.floor(slides.length / 2) : -1;
+  const scenes: Scene[] = slides.map((s, i) => {
+    const end = i + 1 < slides.length ? slides[i + 1].at : duration;
+    const dur = Math.max(1, end - s.at);
+    if (i === special) {
+      const sc = secondScene(c.category, s.title, `${c.lectureId}:${i}`);
+      return { ...sc, dur, title: fit(s.title, 24) } as Scene;
+    }
+    const title = fit(s.title, 20);
+    return {
+      kind: "slide",
+      dur,
+      title,
+      bullets: s.bullets.slice(0, 3).map((b) => fit(b, 26)),
+      marks: [{ kind: "underline", x1: 60, y1: 98, x2: 60 + Math.min(520, [...title].length * 27), at: 0.6 }],
+    };
+  });
+  const caps = (c.script?.captions ?? []).filter((x) => x.at >= 0 && x.at < duration).map((x) => ({ at: x.at, text: fit(x.text, 30) }));
+  return {
+    label: fit(`${shortTitle(c.courseTitle)} · ${c.lectureTitle}`, 44),
+    seed: c.lectureId,
+    scenes,
+    captions: caps.length ? caps : [{ at: 0, text: fit(`「${c.lectureTitle}」 강을 시작할게요.`, 30) }],
+  };
+}
