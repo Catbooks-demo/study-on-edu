@@ -1,3 +1,4 @@
+import { USER_COOKIE, issueUserSession } from "@/server/auth/session";
 import { db } from "@/server/db";
 
 let seq = 0;
@@ -31,6 +32,11 @@ export async function makeCourse(opts: {
   status?: string;
   lectures?: number[];
   instructorId?: string;
+  salePrice?: number | null;
+  saleEndsAt?: Date | null;
+  accessDays?: number | null;
+  inSubscription?: boolean;
+  hasResource?: boolean;
 } = {}) {
   const n = next();
   const categoryCode = opts.categoryCode ?? "DEV";
@@ -48,6 +54,10 @@ export async function makeCourse(opts: {
       instructor_id: instructorId,
       level: "beginner",
       price: opts.price ?? 99_000,
+      sale_price: opts.salePrice ?? null,
+      sale_ends_at: opts.saleEndsAt ?? null,
+      access_days: opts.accessDays === undefined ? 365 : opts.accessDays,
+      in_subscription: opts.inSubscription ?? false,
       status: opts.status ?? "published",
     },
   });
@@ -56,7 +66,14 @@ export async function makeCourse(opts: {
   for (const [i, sec] of (opts.lectures ?? [600, 600]).entries()) {
     lectures.push(
       await db.lecture.create({
-        data: { section_id: section.id, course_id: course.id, title: `강 ${i + 1}`, sort: i + 1, duration_sec: sec },
+        data: {
+          section_id: section.id,
+          course_id: course.id,
+          title: `강 ${i + 1}`,
+          sort: i + 1,
+          duration_sec: sec,
+          has_resource: opts.hasResource ?? false,
+        },
       }),
     );
   }
@@ -97,4 +114,65 @@ export async function makeSubscription(userId: string, now = new Date()) {
       current_period_end: new Date(now.getTime() + 30 * 86_400_000),
     },
   });
+}
+
+/** 시험용 패키지. */
+export async function makeBundle(courseIds: string[], opts: { price?: number; accessDays?: number | null } = {}) {
+  const n = next();
+  return db.bundle.create({
+    data: {
+      code: `SO-PKG-T${n}`,
+      title: `시험 패키지 ${n}`,
+      price: opts.price ?? 150_000,
+      access_days: opts.accessDays === undefined ? 365 : opts.accessDays,
+      courses: { create: courseIds.map((course_id, sort) => ({ course_id, sort })) },
+    },
+  });
+}
+
+/** 시험용 쿠폰. 기본은 지금 쓸 수 있는 정률 10% (대상 전체). */
+export async function makeCoupon(opts: {
+  code?: string;
+  kind?: "fixed" | "percent";
+  value?: number;
+  maxDiscount?: number | null;
+  minAmount?: number | null;
+  target?: "all" | "category" | "course" | "instructor";
+  targetRef?: string | null;
+  perUserOnce?: boolean;
+  totalLimit?: number | null;
+  startsAt?: Date;
+  endsAt?: Date;
+  instructorId?: string | null;
+  referral?: boolean;
+} = {}) {
+  const now = Date.now();
+  return db.coupon.create({
+    data: {
+      code: opts.code ?? `TEST${++seq}`,
+      kind: opts.kind ?? "percent",
+      value: opts.value ?? 10,
+      max_discount: opts.maxDiscount ?? null,
+      min_amount: opts.minAmount ?? null,
+      target: opts.target ?? "all",
+      target_ref: opts.targetRef ?? null,
+      per_user_once: opts.perUserOnce ?? false,
+      total_limit: opts.totalLimit ?? null,
+      starts_at: opts.startsAt ?? new Date(now - 86_400_000),
+      ends_at: opts.endsAt ?? new Date(now + 30 * 86_400_000),
+      instructor_id: opts.instructorId ?? null,
+      referral: opts.referral ?? false,
+    },
+  });
+}
+
+/** 로그인한 회원 쿠키 (call()의 cookies에 넣는다). */
+export async function loginCookie(userId: string): Promise<Record<string, string>> {
+  return { [USER_COOKIE]: await issueUserSession(userId) };
+}
+
+/** 시험용 직원. */
+export async function makeStaff(role: "admin" | "cs" | "content" = "cs") {
+  const n = next();
+  return db.staff.create({ data: { email: `${role}${n}@studyon.test`, name: `${role}${n}`, role, password_hash: "scrypt$test" } });
 }
