@@ -21,7 +21,7 @@ export function CourseCard({ c, rank }: { c: CourseSummary; rank?: number }) {
           <CourseThumb code={c.code} category={c.category.code} title={shortTitle(c.title)} badge={durationKo(c.total_sec)} className="h-full w-full" />
         </HoverPreview>
         {rank !== undefined && (
-          <span className="pointer-events-none absolute bottom-1 right-3 text-5xl font-black italic leading-none text-white [-webkit-text-stroke:2px_#1B1A2E] [paint-order:stroke]" aria-label={`인기 ${rank}위`}>
+          <span className="pointer-events-none absolute bottom-1 right-3 text-5xl font-black italic leading-none text-white [-webkit-text-stroke:2px_#10213D] [paint-order:stroke]" aria-label={`인기 ${rank}위`}>
             {rank}
           </span>
         )}

@@ -3,32 +3,32 @@ import { hash32, unit } from "./hash";
 /** 분야별 색 두 벌 (그라데이션 시작·끝·잉크). */
 export const CATEGORY_PALETTES: Record<string, { from: string; to: string; ink: string; accent: string }[]> = {
   DEV: [
-    { from: "#4A2EE0", to: "#8F7BFF", ink: "#FFFFFF", accent: "#F5C518" },
-    { from: "#241769", to: "#5B3DF5", ink: "#FFFFFF", accent: "#6FE3D2" },
+    { from: "#0A62D6", to: "#5AA4FF", ink: "#FFFFFF", accent: "#F5C518" },
+    { from: "#082A5A", to: "#0F7BFF", ink: "#FFFFFF", accent: "#6FE3D2" },
   ],
   DATA: [
     { from: "#0C7F78", to: "#5FD9C6", ink: "#FFFFFF", accent: "#F5C518" },
     { from: "#0F4C5C", to: "#2BB3A3", ink: "#FFFFFF", accent: "#FFB0A0" },
   ],
   CERT: [
-    { from: "#F5C518", to: "#FF9F43", ink: "#1B1A2E", accent: "#5B3DF5" },
-    { from: "#FAD96A", to: "#F5C518", ink: "#1B1A2E", accent: "#E2475F" },
+    { from: "#F5C518", to: "#FF9F43", ink: "#10213D", accent: "#0F7BFF" },
+    { from: "#FAD96A", to: "#F5C518", ink: "#10213D", accent: "#E2475F" },
   ],
   LANG: [
     { from: "#E2475F", to: "#FFA391", ink: "#FFFFFF", accent: "#F5C518" },
     { from: "#B8325A", to: "#F2788E", ink: "#FFFFFF", accent: "#FFE7A0" },
   ],
   DSGN: [
-    { from: "#9A2FC0", to: "#F09BE2", ink: "#FFFFFF", accent: "#F5C518" },
-    { from: "#5B1F8F", to: "#C45BE0", ink: "#FFFFFF", accent: "#6FE3D2" },
+    { from: "#0A62D6", to: "#7FBCFF", ink: "#FFFFFF", accent: "#F5C518" },
+    { from: "#0B3A7A", to: "#3D8DFF", ink: "#FFFFFF", accent: "#6FE3D2" },
   ],
   BIZ: [
     { from: "#0E7A4E", to: "#8EDDA8", ink: "#FFFFFF", accent: "#F5C518" },
     { from: "#1D4D3A", to: "#3FAE74", ink: "#FFFFFF", accent: "#FAD96A" },
   ],
   EXAM: [
-    { from: "#1B1A2E", to: "#4A3FB0", ink: "#FFFFFF", accent: "#F5C518" },
-    { from: "#2A2470", to: "#7F66F9", ink: "#FFFFFF", accent: "#FFB0A0" },
+    { from: "#10213D", to: "#4A3FB0", ink: "#FFFFFF", accent: "#F5C518" },
+    { from: "#0B3A7A", to: "#4A9BFF", ink: "#FFFFFF", accent: "#FFB0A0" },
   ],
 };
 

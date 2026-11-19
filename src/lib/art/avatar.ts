@@ -1,14 +1,14 @@
 import { hash32, unit } from "./hash";
 
 const PALETTES = [
-  ["#5B3DF5", "#F5C518", "#E3DDFF"],
-  ["#1B1A2E", "#7F66F9", "#F5C518"],
+  ["#0F7BFF", "#F5C518", "#DBEAFE"],
+  ["#10213D", "#4A9BFF", "#F5C518"],
   ["#0C7F78", "#6FE3D2", "#FAFAF7"],
-  ["#E2475F", "#FFD7CF", "#5B3DF5"],
-  ["#F5C518", "#1B1A2E", "#FFFFFF"],
-  ["#9A2FC0", "#F09BE2", "#FAD96A"],
-  ["#0E7A4E", "#8EDDA8", "#1B1A2E"],
-  ["#3C24B8", "#C8BBFF", "#FF8A7A"],
+  ["#E2475F", "#FFD7CF", "#0F7BFF"],
+  ["#F5C518", "#10213D", "#FFFFFF"],
+  ["#0A62D6", "#7FBCFF", "#FAD96A"],
+  ["#0E7A4E", "#8EDDA8", "#10213D"],
+  ["#0B4AA5", "#BFDBFE", "#FF8A7A"],
 ] as const;
 
 export type AvatarShape = "orbit" | "split" | "stack" | "petal";

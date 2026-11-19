@@ -8,13 +8,13 @@ export const W = 640;
 export const H = 360;
 
 export const COLORS = {
-  board: "#211B4A",
+  board: "#0B2A55",
   panel: "#16113A",
-  ink: "#1B1A2E",
+  ink: "#10213D",
   white: "#FFFFFF",
-  soft: "#C8BBFF",
-  lilac: "#E3DDFF",
-  violet: "#7F66F9",
+  soft: "#BFDBFE",
+  lilac: "#DBEAFE",
+  violet: "#4A9BFF",
   lemon: "#F5C518",
   coral: "#FF8A7A",
   mint: "#6FE3D2",
@@ -220,7 +220,7 @@ function drawCode(ops: Op[], s: Extract<Scene, { kind: "code" }>, u: number) {
   let cursorDone = false;
   s.lines.forEach((line, li) => {
     const y = 120 + li * 27;
-    ops.push({ op: "text", x: 58, y, text: String(li + 1), size: 13, color: "#6C63A8", font: "mono" });
+    ops.push({ op: "text", x: 58, y, text: String(li + 1), size: 13, color: "#6B8FC4", font: "mono" });
     if (cursorDone) return;
     const parts: { text: string; color: string }[] = [];
     let typedAll = true;
@@ -297,7 +297,7 @@ export function composeFrame(clip: Clip, t: number): Op[] {
   if (scene) drawMarks(ops, scene, u, seed);
 
   // 강 이름 (위)과 자막 (아래)
-  ops.push({ op: "text", x: 40, y: 26, text: clip.label, size: 13, weight: 600, color: "#8E84C9" });
+  ops.push({ op: "text", x: 40, y: 26, text: clip.label, size: 13, weight: 600, color: "#8FB2E0" });
   const cap = [...clip.captions].reverse().find((c) => c.at <= time);
   if (cap) {
     ops.push({ op: "rect", x: W / 2 - 230, y: 312, w: 460, h: 32, r: 8, fill: "#000000", opacity: 0.45 });
