@@ -60,7 +60,7 @@ function Lang({ p, v }: { p: P; v: number }) {
       <path d="M14 26 H112 a14 14 0 0 1 14 14 V90 a14 14 0 0 1 -14 14 H54 L30 124 V104 H14 a14 14 0 0 1 -14 -14 V40 a14 14 0 0 1 14 -14 Z" fill={p.ink} opacity="0.9" />
       <text x="62" y="82" textAnchor="middle" fontSize="44" fontWeight="800" fill={p.accent}>{glyphs[0]}</text>
       <path d="M82 76 H156 a12 12 0 0 1 12 12 V130 a12 12 0 0 1 -12 12 H146 V160 L126 142 H82 a12 12 0 0 1 -12 -12 V88 a12 12 0 0 1 12 -12 Z" fill={p.accent} />
-      <text x="119" y="124" textAnchor="middle" fontSize="36" fontWeight="800" fill="#1B1A2E">{glyphs[1]}</text>
+      <text x="119" y="124" textAnchor="middle" fontSize="36" fontWeight="800" fill="#10213D">{glyphs[1]}</text>
       {[0, 1, 2].map((i) => <circle key={i} cx={140 + i * 10} cy="20" r="3.5" fill={p.ink} opacity={0.4 + i * 0.25} />)}
     </g>
   );
@@ -77,7 +77,7 @@ function Dsgn({ p, v }: { p: P; v: number }) {
       {[[c[0], c[1]], [c[4], c[5]]].map(([x, y], i) => <rect key={i} x={x - 7} y={y - 7} width="14" height="14" fill="#FFFFFF" stroke={p.ink} strokeWidth="3" />)}
       {[0, 1, 2].map((i) => <circle key={i} cx={30 + i * 26} cy="158" r="10" fill={i === 1 ? p.accent : p.ink} opacity={i === 1 ? 1 : 0.5 + i * 0.2} />)}
       <path d="M132 14 L150 32 L128 70 L116 58 Z" fill={p.accent} />
-      <circle cx="128" cy="44" r="4" fill="#1B1A2E" />
+      <circle cx="128" cy="44" r="4" fill="#10213D" />
     </g>
   );
 }
@@ -100,14 +100,14 @@ function Exam({ p, v }: { p: P; v: number }) {
   return (
     <g>
       <rect x="14" y="16" width="120" height="146" rx="8" fill="#FFFFFF" opacity="0.94" />
-      {[0, 1, 2, 3, 4, 5].map((i) => <path key={i} d={`M26 ${48 + i * 18} H122`} stroke={p.ink === "#FFFFFF" ? "#C8BBFF" : p.ink} strokeWidth="1.5" opacity="0.6" />)}
+      {[0, 1, 2, 3, 4, 5].map((i) => <path key={i} d={`M26 ${48 + i * 18} H122`} stroke={p.ink === "#FFFFFF" ? "#BFDBFE" : p.ink} strokeWidth="1.5" opacity="0.6" />)}
       <path d="M36 16 V162" stroke="#FF8A7A" strokeWidth="1.5" opacity="0.7" />
-      <text x="44" y="62" fontSize="16" fontWeight="700" fill="#1B1A2E">{f}</text>
+      <text x="44" y="62" fontSize="16" fontWeight="700" fill="#10213D">{f}</text>
       <path d="M46 92 q14 -12 30 0 t30 0" fill="none" stroke={p.accent} strokeWidth="3" strokeLinecap="round" />
       <g transform="rotate(38 140 90)">
         <rect x="132" y="30" width="16" height="104" rx="3" fill={p.accent} />
         <path d="M132 134 L140 152 L148 134 Z" fill="#FAD96A" />
-        <path d="M137 145 L140 152 L143 145 Z" fill="#1B1A2E" />
+        <path d="M137 145 L140 152 L143 145 Z" fill="#10213D" />
       </g>
     </g>
   );

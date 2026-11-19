@@ -84,7 +84,7 @@ export function LecturePlayer({
 
   return (
     <div ref={boxRef} className={controls ? "bg-ink" : "h-full w-full"} data-testid={testId}>
-      <div className={`relative overflow-hidden bg-[#211B4A] ${className}`}>
+      <div className={`relative overflow-hidden bg-[#0B2A55] ${className}`}>
         {reduced ? (
           <Poster ops={poster} label={`${label} (정지 화면)`} className="block h-full w-full" />
         ) : (

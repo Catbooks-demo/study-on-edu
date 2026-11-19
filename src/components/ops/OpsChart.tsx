@@ -19,7 +19,7 @@ export function OpsChart({ series }: { series: { at: string; requests: number; e
           const eh = (s.errors / max) * (H - 4);
           return (
             <g key={s.at}>
-              <rect x={i * bw + 1} y={H - h} width={Math.max(1, bw - 2)} height={h} fill="#5B3DF5" opacity={0.75}>
+              <rect x={i * bw + 1} y={H - h} width={Math.max(1, bw - 2)} height={h} fill="#0F7BFF" opacity={0.75}>
                 <title>{`${s.at.slice(11, 16)} UTC · ${s.requests}건 · p95 ${s.p95_ms}ms`}</title>
               </rect>
               {eh > 0 && <rect x={i * bw + 1} y={H - eh} width={Math.max(1, bw - 2)} height={eh} fill="#e11d48" />}

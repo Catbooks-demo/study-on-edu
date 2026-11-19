@@ -48,7 +48,7 @@ export function FakeVideo({ clip, time, label }: { clip: Clip; time: number; lab
   }, [clip, t, reduced]);
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden bg-[#211B4A]">
+    <div className="relative aspect-video w-full overflow-hidden bg-[#0B2A55]">
       {reduced && still ? (
         <Poster ops={still} label={label} className="block h-full w-full" testId="player-poster" />
       ) : (

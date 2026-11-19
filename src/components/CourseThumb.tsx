@@ -69,8 +69,8 @@ export function CourseThumb({
       ))}
       {badge && (
         <g>
-          <rect x="16" y="140" width={18 + [...badge].length * 11} height="24" rx="12" fill={p.ink === "#FFFFFF" ? "#1B1A2E" : "#FFFFFF"} opacity="0.85" />
-          <text x="25" y="157" fontSize="13" fontWeight="700" fill={p.ink === "#FFFFFF" ? "#FFFFFF" : "#1B1A2E"}>
+          <rect x="16" y="140" width={18 + [...badge].length * 11} height="24" rx="12" fill={p.ink === "#FFFFFF" ? "#10213D" : "#FFFFFF"} opacity="0.85" />
+          <text x="25" y="157" fontSize="13" fontWeight="700" fill={p.ink === "#FFFFFF" ? "#FFFFFF" : "#10213D"}>
             {badge}
           </text>
         </g>
