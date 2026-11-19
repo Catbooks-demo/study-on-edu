@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/AuthForms";
+import { Logo } from "@/components/Logo";
 import { currentStaff } from "@/server/auth/current";
 import { can } from "@/server/roles";
 import { NAV } from "./nav";
@@ -18,8 +19,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   return (
     <div className="flex min-h-screen bg-slate-100 text-ink">
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col overflow-y-auto bg-ink px-3 py-5 text-sm text-slate-300 md:flex">
-        <Link href="/admin" className="px-2 text-lg font-extrabold tracking-tight text-white">
-          스터디온<span className="text-lemon-500">에듀</span> <span className="text-xs font-semibold text-brand-300">운영</span>
+        <Link href="/admin" aria-label="스터디온에듀 운영" className="flex flex-col items-start gap-1 px-2">
+          <span className="rounded-md bg-white px-2 py-1"><Logo className="[&_img]:h-7" /></span>
+          <span className="text-xs font-semibold text-brand-300">운영</span>
         </Link>
         <nav aria-label="운영 메뉴" className="mt-6 flex-1 space-y-4">
           {groups.map((g) => (
