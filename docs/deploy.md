@@ -301,7 +301,7 @@ docker compose exec app npm run -s apikey -- --name prometheus --scopes metrics 
 . .\config.ps1; cd app; npm run -s apikey -- --name prometheus --scopes metrics       # B
 ```
 
-범위: `read`(개인정보 가림), `read_pii`(원문), `write`(서비스 모드·장애 공지·대기열·쿠폰), `metrics`(/metrics만). 키당 분당 600회까지예요.
+범위: `read`(개인정보 가림), `read_pii`(원문), `write`(서비스 모드·장애 공지·대기열·쿠폰·쿠폰함 발급·메시지함 안내), `metrics`(/metrics만). 키당 분당 600회까지예요.
 
 ### Prometheus 설정 예시
 
@@ -350,6 +350,25 @@ curl -X POST -H "Authorization: Bearer <write 키>" -H "Content-Type: applicatio
 - 결제 캠페인은 `course_codes`로 대상 강의를 정해요(비우면 모든 주문). 할인 마감 전에 순번표를 받은 수강생은 마감 뒤 30분까지 그때 가격으로 주문할 수 있어요.
 - 라이브 대기열(`live:<id>`)은 시작 10분 전부터 끝날 때까지 자동으로 켜져요. 그 사이에 직접 끄면 다시 켜지 않아요.
 - 대기 인원·평균 대기·최근 1분 입장은 `/admin/ops/queue`, `GET /api/v1/queue`, 지표 `studyon_queue_waiting`에서 봐요.
+
+### 쿠폰함·메시지함 (회원별 쿠폰·안내)
+
+회원은 마이페이지 **메시지함**(`/my/inbox`)과 **쿠폰함**(`/my/coupons`)에서 받은 안내와 쿠폰을 봐요. 주문서의 '내 쿠폰'에서 고르면 바로 적용돼요. 메일·문자 발송 기록(`/admin/messages`, 보낸 편지함)과는 따로예요.
+
+1. 받은 회원만 쓰는 쿠폰 만들기: `POST /api/v1/coupons`에 `"private": true` (또는 `/admin/coupons`의 '받은 회원만'). 1인 1회로 고정돼요. 쿠폰함에 없는 회원이 쓰면 403 `COUPON_NOT_YOURS`예요.
+2. 회원 쿠폰함에 넣기 (멱등):
+
+```bash
+curl -X POST -H "Authorization: Bearer <write 키>" -H "Content-Type: application/json"   -d '{"member_ids":["<회원 id>"],"message":{"title":"불편을 드려 죄송해요","body":"보상 쿠폰을 넣어 두었어요."}}'   http://127.0.0.1:3200/api/v1/coupons/SORRY5000/grants
+```
+
+- 응답 `{coupon, granted, already, not_found}`. 회원 id는 v1 응답의 회원 id(`member_id`)예요. 한 번에 500명까지.
+- 새로 받은 회원마다 메시지함에 쿠폰 도착 안내가 하나 들어가요(`message`가 없으면 기본 문구). 이미 받은 회원은 다시 넣지 않아요.
+- 꺼진 쿠폰(409), 기간이 끝난 쿠폰(400), 강사 추천 코드(400)는 넣을 수 없어요.
+
+3. 돈과 상관없는 안내 보내기: `POST /api/v1/inbox` `{member_ids, title, body, kind?, link?}` → `{sent, not_found}`. 링크는 `/`로 시작하는 사이트 안 경로만 받아요.
+
+발급·안내는 작업 기록(`coupon.grant`·`inbox.send`, `api:<키 이름>`)에 남고, 직원은 `/admin/coupons`(최근 발급)와 `/admin/inbox`(회원 메시지함)에서 봐요.
 
 ### 웹훅
 

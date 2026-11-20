@@ -253,6 +253,8 @@ model User {
   reviews            Review[]
   inquiries          Inquiry[]
   messages           Message[]
+  coupon_box         UserCoupon[]
+  inbox              InboxMessage[]
   live_seats         LiveSeat[]
   live_chats         LiveChat[]
   refunds            Refund[]
@@ -424,8 +426,11 @@ model Coupon {
   instructor_id String?
   instructor    Instructor?        @relation(fields: [instructor_id], references: [id])
   active        Boolean            @default(true)
+  private       Boolean            @default(false) // true면 쿠폰함에 받은 회원만 쓴다(1인 1회로 고정)
   orders        Order[]
   redemptions   CouponRedemption[]
+  holders       UserCoupon[]
+  inbox         InboxMessage[]
   created_at    DateTime           @default(now())
   updated_at    DateTime           @updatedAt
 
@@ -446,6 +451,22 @@ model CouponRedemption {
   @@unique([coupon_id, user_id])
   @@index([order_id])
   @@map("coupon_redemptions")
+}
+
+// 쿠폰함: 회원이 받은 쿠폰. 쓴 여부는 coupon_redemptions로 안다.
+model UserCoupon {
+  id        String   @id @default(cuid())
+  user_id   String
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  coupon_id String
+  coupon    Coupon   @relation(fields: [coupon_id], references: [id], onDelete: Cascade)
+  source    String   @default("site") // site, admin, api
+  issued_at DateTime @default(now())
+
+  @@unique([user_id, coupon_id])
+  @@index([coupon_id])
+  @@index([issued_at])
+  @@map("user_coupons")
 }
 
 // ───────────────────────── 구독 ─────────────────────────
@@ -722,6 +743,26 @@ model Message {
   @@index([user_id, kind])
   @@index([created_at])
   @@map("messages")
+}
+
+// 회원 메시지함: 회원이 마이페이지에서 읽는 안내. (messages는 메일·문자 발송 기록이라 따로 둔다)
+model InboxMessage {
+  id         String    @id @default(cuid())
+  user_id    String
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  kind       String // coupon, notice, ...
+  title      String
+  body       String
+  link       String? // 사이트 안 경로만 (/로 시작)
+  coupon_id  String?
+  coupon     Coupon?   @relation(fields: [coupon_id], references: [id], onDelete: SetNull)
+  source     String    @default("site") // site, admin, api
+  read_at    DateTime?
+  created_at DateTime  @default(now())
+
+  @@index([user_id, created_at])
+  @@index([created_at])
+  @@map("inbox_messages")
 }
 
 // ───────────────────────── 라이브 ─────────────────────────

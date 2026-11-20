@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { dateTimeKo } from "@/lib/format";
 import { currentUser } from "@/server/auth/current";
+import { myCoupons } from "@/server/couponbox";
 import { tossEnabled } from "@/server/env";
 import { HttpError } from "@/server/http";
 import { getOrderForUser, orderView } from "@/server/orders";
@@ -22,6 +23,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
   if (order.status !== "pending") redirect(`/my/orders/${order.code}`);
   const v = orderView(order);
   const expired = order.expires_at <= new Date();
+  const box = (await myCoupons(user.id)).filter((c) => c.state === "usable").map((c) => ({ code: c.code, name: c.name, discount: c.discount }));
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="text-2xl font-extrabold tracking-tight">주문서</h1>
@@ -34,7 +36,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
           <Link href="/courses" className="btn-primary mt-4">강의 다시 담기</Link>
         </div>
       ) : (
-        <CheckoutForm order={v} toss={tossEnabled()} />
+        <CheckoutForm order={v} toss={tossEnabled()} boxCoupons={box} />
       )}
     </div>
   );

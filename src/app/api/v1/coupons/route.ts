@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiActor, authApiKey } from "@/server/apikeys";
 import { audit } from "@/server/audit";
+import { privateData } from "@/server/couponbox";
 import { db } from "@/server/db";
 import { HttpError, readJson, route } from "@/server/http";
 
@@ -19,6 +20,7 @@ const body = z
     target: z.enum(["all", "category", "course", "instructor"]).default("all"),
     target_ref: z.string().trim().max(60).nullish(),
     per_user_once: z.boolean().default(false),
+    private: z.boolean().default(false),
     total_limit: z.number().int().positive().nullish(),
     starts_at: z.iso.datetime({ offset: true }),
     ends_at: z.iso.datetime({ offset: true }),
@@ -28,7 +30,10 @@ const body = z
   .refine((b) => b.target === "all" || !!b.target_ref, { message: "대상(target_ref)을 적어 주세요." })
   .refine((b) => new Date(b.ends_at) > new Date(b.starts_at), { message: "끝나는 시각이 시작보다 뒤여야 해요." });
 
-/** 쿠폰 만들기 (write). 강사 추천 코드(referral)는 API로 만들 수 없다. */
+/**
+ * 쿠폰 만들기 (write). 강사 추천 코드(referral)는 API로 만들 수 없다.
+ * private이면 쿠폰함에 받은 회원만 쓸 수 있고 1인 1회로 고정된다(받게 하려면 /api/v1/coupons/{code}/grants).
+ */
 export const POST = route(async (req) => {
   const key = await authApiKey(req, "write");
   const raw = await req.clone().json().catch(() => null);
@@ -48,18 +53,29 @@ export const POST = route(async (req) => {
           min_amount: b.min_amount ?? null,
           target: b.target,
           target_ref: b.target === "all" ? null : b.target_ref,
-          per_user_once: b.per_user_once,
+          ...privateData(b.private, b.per_user_once),
           total_limit: b.total_limit ?? null,
           starts_at: new Date(b.starts_at),
           ends_at: new Date(b.ends_at),
           referral: false,
         },
       });
-      await audit(apiActor(key), "coupon.create", `coupon:${row.id}`, { code: row.code }, tx);
+      await audit(apiActor(key), "coupon.create", `coupon:${row.id}`, { code: row.code, private: row.private }, tx);
       return row;
     });
     return NextResponse.json(
-      { coupon: { id: c.id, code: c.code, kind: c.kind, value: c.value, starts_at: c.starts_at.toISOString(), ends_at: c.ends_at.toISOString() } },
+      {
+        coupon: {
+          id: c.id,
+          code: c.code,
+          kind: c.kind,
+          value: c.value,
+          private: c.private,
+          per_user_once: c.per_user_once,
+          starts_at: c.starts_at.toISOString(),
+          ends_at: c.ends_at.toISOString(),
+        },
+      },
       { status: 201 },
     );
   } catch (e) {

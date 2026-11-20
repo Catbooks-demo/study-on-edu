@@ -27,7 +27,8 @@ npm run dev                   # http://localhost:3000
 - 설명: `/api/v1/openapi.json` (OpenAPI 3.1)
 - 키: `npm run apikey -- --name <이름> --scopes read,write,metrics` (원문은 한 번만 보여요)
 - 읽기: 강의·강사·주문·결제·환불·구독·수강권·문의·장애 공지·대기열·서비스 모드
-- 쓰기(write): 서비스 모드, 장애 공지, 대기열 켜기·한도, 쿠폰
+- 쓰기(write): 서비스 모드, 장애 공지, 대기열 켜기·한도, 쿠폰(받은 회원만 쓰는 `private` 포함), 회원 쿠폰함 발급(`POST /api/v1/coupons/{code}/grants`), 회원 메시지함 안내(`POST /api/v1/inbox`)
+- 회원 화면: 마이페이지 메시지함(`/my/inbox`, 안 읽은 수 표시)·쿠폰함(`/my/coupons`), 주문서의 '내 쿠폰'에서 바로 고르기
 - 지표: `/metrics` (Prometheus, `metrics` 범위 키)
 - 웹훅: `order.paid`, `order.refunded`, `subscription.status_changed`, `service_mode.changed`, `incident.created`, `incident.updated` (서명 `X-StudyOn-Signature`)
 

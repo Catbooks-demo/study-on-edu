@@ -25,7 +25,7 @@ export async function couponRule(tx: Tx, c: Coupon): Promise<CouponRule> {
 }
 
 /**
- * 쿠폰 확인. 쿠폰 행을 잠그고(SELECT … FOR UPDATE) 기간·1인 1회·총수량을 본다.
+ * 쿠폰 확인. 쿠폰 행을 잠그고(SELECT … FOR UPDATE) 받은 회원 전용 여부·기간·1인 1회·총수량을 본다.
  * lines를 주면 이 주문 줄에 쓸 수 있는지(대상·최소 금액)도 본다.
  * 잠금은 트랜잭션 끝까지 가므로, 같은 쿠폰을 쓰는 주문은 차례로 처리된다.
  */
@@ -33,6 +33,10 @@ export async function validateCoupon(tx: Tx, code: string, userId: string, lines
   const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM coupons WHERE code = ${normalizeCode(code)} FOR UPDATE`;
   const c = rows.length ? await tx.coupon.findUnique({ where: { id: rows[0].id } }) : null;
   if (!c || !c.active) throw new HttpError(404, "COUPON_NOT_FOUND", "쿠폰 번호를 다시 확인해 주세요.");
+  if (c.private) {
+    const mine = await tx.userCoupon.findUnique({ where: { user_id_coupon_id: { user_id: userId, coupon_id: c.id } } });
+    if (!mine) throw new HttpError(403, "COUPON_NOT_YOURS", "이 쿠폰은 다른 회원에게 발급된 쿠폰이에요.");
+  }
   if (now < c.starts_at || now >= c.ends_at) throw new HttpError(400, "COUPON_EXPIRED", "사용 기간이 아닌 쿠폰이에요.");
   if (c.per_user_once) {
     const used = await tx.couponRedemption.findUnique({ where: { coupon_id_user_id: { coupon_id: c.id, user_id: userId } } });

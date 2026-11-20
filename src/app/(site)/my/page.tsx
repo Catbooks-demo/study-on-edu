@@ -6,6 +6,7 @@ import { LogoutButton } from "@/components/AuthForms";
 import { ORDER_STATUS_LABEL, won } from "@/lib/format";
 import { currentUser } from "@/server/auth/current";
 import { myClassroom } from "@/server/classroom";
+import { unreadCount } from "@/server/inbox";
 import { listOrdersForUser } from "@/server/orders";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ export const metadata: Metadata = { title: "마이페이지" };
 const MENU = [
   ["/my/classroom", "내 강의실"],
   ["/my/orders", "주문·환불"],
+  ["/my/inbox", "메시지함"],
+  ["/my/coupons", "쿠폰함"],
   ["/my/notes", "노트"],
   ["/my/questions", "내 질문"],
   ["/my/inquiries", "1:1 문의"],
@@ -25,7 +28,7 @@ const MENU = [
 export default async function MyPage() {
   const user = await currentUser();
   if (!user) redirect("/login?next=/my");
-  const [room, orders] = await Promise.all([myClassroom(user.id), listOrdersForUser(user.id, 5)]);
+  const [room, orders, unread] = await Promise.all([myClassroom(user.id), listOrdersForUser(user.id, 5), unreadCount(user.id)]);
   const cards = [...room.active, ...room.completed];
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -41,7 +44,12 @@ export default async function MyPage() {
       </div>
       <nav aria-label="마이페이지 메뉴" className="mt-6 flex flex-wrap gap-2 text-sm">
         {MENU.map(([href, label]) => (
-          <Link key={href} href={href} className="rounded-full bg-white px-3 py-1.5 font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-brand-700">{label}</Link>
+          <Link key={href} href={href} className="rounded-full bg-white px-3 py-1.5 font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-brand-700">
+            {label}
+            {href === "/my/inbox" && unread > 0 && (
+              <span className="ml-1.5 rounded-full bg-rose-500 px-1.5 py-0.5 text-xs font-bold text-white" aria-label={`안 읽은 메시지 ${unread}개`}>{unread}</span>
+            )}
+          </Link>
         ))}
       </nav>
 

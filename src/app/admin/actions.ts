@@ -9,6 +9,7 @@ import { approveCourse, rejectCourse, setCourseHidden, setInstructorStatus, upda
 import { NEW_KEY_COOKIE, SCOPES, type Scope, issueApiKey, revokeApiKey } from "@/server/apikeys";
 import { audit } from "@/server/audit";
 import { currentStaff } from "@/server/auth/current";
+import { privateData } from "@/server/couponbox";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db";
 import { revokeDevice } from "@/server/devices";
@@ -154,11 +155,11 @@ export async function couponCreateAction(f: FormData) {
         target_ref: target === "all" ? null : s(f, "target_ref"),
         starts_at: kstDateTime(starts),
         ends_at: kstDateTime(ends, 23, 59, 59),
-        per_user_once: on(f, "per_user_once"),
+        ...privateData(on(f, "private"), on(f, "per_user_once")),
         total_limit: n(f, "total_limit") ?? null,
       },
     });
-    await audit(`staff:${st.id}`, "coupon.create", `coupon:${c.code}`, { kind, value, target });
+    await audit(`staff:${st.id}`, "coupon.create", `coupon:${c.code}`, { kind, value, target, private: c.private });
     return `${c.code} 쿠폰을 만들었어요.`;
   });
 }
