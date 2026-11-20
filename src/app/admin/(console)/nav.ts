@@ -41,6 +41,7 @@ export const NAV: NavGroup[] = [
       { href: "/admin/reviews", label: "후기", perm: "support" },
       { href: "/admin/notices", label: "공지", perm: "content_pages" },
       { href: "/admin/faqs", label: "FAQ", perm: "content_pages" },
+      { href: "/admin/inbox", label: "회원 메시지함", perm: "support" },
       { href: "/admin/messages", label: "보낸 편지함", perm: "support" },
     ],
   },

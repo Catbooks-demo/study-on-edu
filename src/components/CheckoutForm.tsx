@@ -17,8 +17,11 @@ export type CheckoutOrder = {
   items: { id: string; title: string; kind: string; unit_price: number; coupon_share: number; paid_amount: number }[];
 };
 
-/** 주문서: 쿠폰 넣기·빼기, 가격 내역, 환불 규정 동의, 결제. */
-export function CheckoutForm({ order, toss }: { order: CheckoutOrder; toss: boolean }) {
+/** 쿠폰함에서 고를 수 있는 쿠폰. */
+export type BoxCouponPick = { code: string; name: string; discount: string };
+
+/** 주문서: 쿠폰 넣기·빼기(번호 입력 또는 내 쿠폰함에서 고르기), 가격 내역, 환불 규정 동의, 결제. */
+export function CheckoutForm({ order, toss, boxCoupons = [] }: { order: CheckoutOrder; toss: boolean; boxCoupons?: BoxCouponPick[] }) {
   const router = useRouter();
   const [code, setCode] = useState(order.coupon_code ?? "");
   const [agreed, setAgreed] = useState(false);
@@ -75,6 +78,30 @@ export function CheckoutForm({ order, toss }: { order: CheckoutOrder; toss: bool
               <button type="button" className="shrink-0 text-sm text-slate-500 underline" onClick={() => setCoupon(null)} disabled={busy}>빼기</button>
             )}
           </form>
+          {boxCoupons.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold text-slate-500">내 쿠폰</p>
+              <ul className="mt-1.5 flex flex-wrap gap-2">
+                {boxCoupons.map((c) => (
+                  <li key={c.code}>
+                    <button
+                      type="button"
+                      data-testid="box-coupon-pick"
+                      className={`rounded-xl px-3 py-2 text-left text-xs ring-1 ${order.coupon_code === c.code ? "bg-brand-50 ring-brand-500" : "bg-white ring-slate-200 hover:ring-brand-300"}`}
+                      onClick={() => {
+                        setCode(c.code);
+                        setCoupon(c.code);
+                      }}
+                      disabled={busy || order.coupon_code === c.code}
+                    >
+                      <span className="block font-bold text-brand-700">{c.discount}</span>
+                      <span className="block text-slate-600">{c.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {order.coupon_code && <p className="mt-2 text-sm text-brand-700" role="status">{order.coupon_code} 쿠폰으로 {won(order.coupon_discount)} 할인돼요.</p>}
           {error && <p className="mt-2 text-sm text-rose-600" role="alert">{error}</p>}
         </section>
