@@ -68,7 +68,21 @@ export function instructorV1(i: Instructor) {
   return { id: i.id, slug: i.slug, display_name: i.display_name, status: i.status, created_at: iso(i.created_at), updated_at: iso(i.updated_at) };
 }
 
-type ItemRow = OrderItem & { course: Course | null; bundle: Bundle | null };
+type ItemRow = OrderItem & {
+  course: Course | null;
+  bundle: Bundle | null;
+  refunds?: Pick<Refund, "status" | "done_at">[];
+};
+
+/** 주문 항목들의 끝난 환불 중 마지막 시각. 환불 목록을 읽지 않았거나 없으면 null (11/25 AXcellent 매출 분석) */
+export function lastRefundAt(items: ItemRow[]): string | null {
+  const times = items.flatMap((i) => (i.refunds ?? []).filter((r) => r.status === "done" && r.done_at).map((r) => r.done_at!));
+  if (times.length === 0) return null;
+  return iso(times.reduce((a, b) => (b > a ? b : a)));
+}
+
+/** 주문 읽기에 같이 싣는 항목 환불(끝난 것만 시각). 두 주문 읽기 경로가 같은 include를 쓴다 */
+export const ORDER_ITEM_REFUNDS = { where: { status: "done" }, select: { status: true, done_at: true } } as const;
 export function orderV1(o: Order & { user: User; items: ItemRow[]; coupon: Coupon | null }, pii: boolean) {
   return {
     id: o.id,
@@ -81,6 +95,8 @@ export function orderV1(o: Order & { user: User; items: ItemRow[]; coupon: Coupo
     coupon_discount: o.coupon_discount,
     payable: o.payable,
     refunded_amount: o.refunded_amount,
+    // 마지막으로 끝난 환불 시각. 받는 쪽이 기간 안 환불을 그 시각으로 뺄 수 있게
+    refunded_at: lastRefundAt(o.items),
     paid_at: iso(o.paid_at),
     expires_at: iso(o.expires_at),
     items: o.items.map((i) => ({
