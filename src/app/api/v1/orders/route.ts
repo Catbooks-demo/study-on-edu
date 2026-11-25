@@ -3,7 +3,7 @@ import { authApiKey, canSeePii } from "@/server/apikeys";
 import { db } from "@/server/db";
 import { route } from "@/server/http";
 import { pageOrder, pageResult, pageWhere, readPage } from "@/server/v1/paginate";
-import { orderV1 } from "@/server/v1/serialize";
+import { ORDER_ITEM_REFUNDS, orderV1 } from "@/server/v1/serialize";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ const statusFilter = (req: Request) => {
 export const GET = route(async (req) => {
   const key = await authApiKey(req, "read");
   const p = readPage(req);
-  const rows = await db.order.findMany({ where: { ...pageWhere(p), ...statusFilter(req) }, orderBy: pageOrder, take: p.limit, include: { user: true, coupon: true, items: { include: { course: true, bundle: true }, orderBy: { created_at: "asc" } } } });
+  const rows = await db.order.findMany({ where: { ...pageWhere(p), ...statusFilter(req) }, orderBy: pageOrder, take: p.limit, include: { user: true, coupon: true, items: { include: { course: true, bundle: true, refunds: ORDER_ITEM_REFUNDS }, orderBy: { created_at: "asc" } } } });
   const pii = canSeePii(key);
   return NextResponse.json(pageResult(rows, p, (r) => orderV1(r, pii)));
 });

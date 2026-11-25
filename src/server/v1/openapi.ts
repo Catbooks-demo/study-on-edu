@@ -50,7 +50,7 @@ export const OPENAPI = {
   paths: {
     "/api/v1/courses": list("강의 목록 (status: draft, in_review, published, rejected, hidden)"),
     "/api/v1/instructors": list("강사 목록 (모두 시연용 가상 활동명)"),
-    "/api/v1/orders": list("주문 목록", status("pending, paid, cancelled, partially_refunded, refunded")),
+    "/api/v1/orders": list("주문 목록 — 환불액 refunded_amount·마지막 환불 시각 refunded_at 포함", status("pending, paid, cancelled, partially_refunded, refunded")),
     "/api/v1/orders/{code}": {
       get: {
         summary: "주문 하나 (주문번호 SO…)",

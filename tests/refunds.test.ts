@@ -8,6 +8,9 @@ import { addToCart } from "@/server/cart";
 import { db } from "@/server/db";
 import { createOrder } from "@/server/orders";
 import { mockPay } from "@/server/payments";
+import { GET as getOrderV1 } from "@/app/api/v1/orders/[code]/route";
+import { GET as listOrdersV1 } from "@/app/api/v1/orders/route";
+import { issueApiKey } from "@/server/apikeys";
 import { approveRefund, previewRefund, rejectRefund, requestRefund } from "@/server/refunds";
 import { resetDb } from "./helpers/db";
 import { call } from "./helpers/http";
@@ -198,5 +201,24 @@ describe("API", () => {
     const ok = await call(approveRoute, { cookies: { [STAFF_COOKIE]: await issueStaffSession(cs.id) }, body: {}, params: { id: r.id } });
     expect(ok.status).toBe(200);
     expect(ok.body.refund.status).toBe("done");
+  });
+});
+
+
+describe("v1 주문 읽기의 환불 칸 (11/25 AXcellent 매출 분석)", () => {
+  it("환불 전 refunded_at null, 끝난 환불 뒤 금액·시각", async () => {
+    const { now, user, order, item } = await boughtCourse(3);
+    const staff = await makeStaff("cs");
+    const k = await issueApiKey("데이터", ["read"]);
+    const auth = { authorization: `Bearer ${k.key}` };
+    type Row = { code: string; refunded_amount: number; refunded_at: string | null; status: string };
+    const before = await call<{ data: Row }>(getOrderV1, { headers: auth, params: { code: order.code } });
+    expect(before.body.data).toMatchObject({ refunded_amount: 0, refunded_at: null });
+    const r = await requestRefund(user.id, item.id, "단순 변심", now);
+    await approveRefund(r.id, staff.id, {}, now);
+    const after = await call<{ data: Row }>(getOrderV1, { headers: auth, params: { code: order.code } });
+    expect(after.body.data).toMatchObject({ refunded_amount: 99_000, refunded_at: now.toISOString(), status: "refunded" });
+    const list = await call<{ data: Row[] }>(listOrdersV1, { headers: auth, url: "http://localhost/api/v1/orders" });
+    expect(list.body.data.find((o) => o.code === order.code)).toMatchObject({ refunded_at: now.toISOString() });
   });
 });
